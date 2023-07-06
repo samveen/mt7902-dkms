@@ -1,0 +1,15 @@
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7921/pci.c b/drivers/net/wireless/mediatek/mt76/mt7921/pci.c
+index ddb1fa4ee01d..9671fbe35a8e 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7921/pci.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7921/pci.c
+@@ -262,6 +262,10 @@ static int mt7921_pci_probe(struct pci_dev *pdev,
+ 	int ret;
+ 	u16 cmd;
+ 
++	ret = pci_reset_function_locked(pdev);
++	if (ret)
++		pci_info(pdev, "Unable to perform FLR\n");
++
+ 	ret = pcim_enable_device(pdev);
+ 	if (ret)
+ 		return ret;

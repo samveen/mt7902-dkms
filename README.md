@@ -1,2 +1,5 @@
 # mt7902-dkms
-Driver MT7902
+Create driver to MT7902-dkms
+
+-- Driver in development not working yet --
+
