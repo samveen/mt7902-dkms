@@ -4,6 +4,10 @@ https://github.com/keepsoftware/mt7902-dkms/issues/2
 # mt7902-dkms
 Create driver for MT7902 by cloning the [MT9721 driver from the kernel](https://github.com/torvalds/linux/tree/master/drivers/net/wireless/mediatek/mt76/mt7921) and modifying it.
 
+# Status
+
+As of now, the code is purely the driver for the mt7921, with just string replacement from mt7921 to mt7902 even in filenames. The build is untested
+
 # Firmware
 Initial firmware source is the acer website URL for the mt7902 windows driver. This needs to be clarified, as it's proprietary.
 
