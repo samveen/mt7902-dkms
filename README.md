@@ -6,3 +6,9 @@ Create driver for MT7902 by cloning the [MT9721 driver from the kernel](https://
 
 # Firmware
 Initial firmware source is the acer website URL for the mt7902 windows driver. This needs to be clarified, as it's proprietary.
+
+
+# License
+- For licensing information of the source, please see https://github.com/torvalds/linux/
+- For licensing information of firmware, there is no firmware in this repo.
+- The contents of URL locations in `firmware/` that are owned by their respective owners. Visit their websites for licensing information.
