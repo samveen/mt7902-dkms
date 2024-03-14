@@ -55,6 +55,11 @@ As of now, the code is purely the driver for the mt7921, with just string replac
   cd /usr/src/mt7902-dkms && sudo git pull
   ```
 
+## PCI ID details
+
+- [https://wikidevi.wi-cat.ru/MediaTek\_MT7902\_Reference\_Design](https://wikidevi.wi-cat.ru/MediaTek_MT7902_Reference_Design)
+- Windows driver `inf` contents as sources from link in [firmware/acer.url](firmware/acer.url)
+
 ## Firmware
 Initial firmware source is the acer website URL for the mt7902 windows driver. This needs to be clarified, as it's proprietary.
 
