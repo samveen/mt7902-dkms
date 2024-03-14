@@ -1,1 +1,10 @@
-linux-6.3.9.tar.xz
+*.tar.xz
+*.tgz
+*.bz
+*.zip
+
+*.o
+*.ko
+*.rej
+
+firmware/
