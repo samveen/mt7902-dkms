@@ -27,4 +27,4 @@ fi
 
 export kernelver
 # build
-make -C mt76/mt7902
+make -C mt76/mt7902 V=1 VERBOSE=1
