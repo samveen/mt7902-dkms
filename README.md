@@ -17,42 +17,42 @@ As of now, the code is purely the driver for the mt7921, with just string replac
 
 ## Usage instructions
 
-- *(One time setup)* Clone this repo into `/usr/src/`:
+- *(One time setup)* Clone this repo into `/usr/src/mt7902`:
   ```
-  sudo git clone https://github.com/samveen/mt7902-dkms /usr/src/mt7902-dkms
+  sudo git clone https://github.com/samveen/mt7902-dkms /usr/src/mt7902
   ```
 
 - Create a link to the source dir with a version number(easier versioned driver updates):
   ```
-  sudo ln -s /usr/src/mt7902-dkms /usr/src/mt7902-dkms-0.0.1
+  sudo ln -s /usr/src/mt7902 /usr/src/mt7902-0.0.1
   ```
 
-- Register the module with DKMS:
+- Register the module with DKMS(for a specific kernel version, add `-k $KVER`):
   ```
-  sudo dkms add --verbose -m mt7902-dkms -v 0.0.1
+  sudo dkms add --verbose -m mt7902 -v 0.0.1
   ```
 
-- Build and install the module:
+- Build and install the module(for a specific kernel version, add `-k $KVER`):
   ```
-  sudo dkms build --verbose -m mt7902-dkms -v 0.0.1   # NEEDS TESTING
-  sudo dkms install --verbose -m mt7902-dkms -v 0.0.1 # NEEDS FIXING
+  sudo dkms build --verbose -m mt7902 -v 0.0.1
+  sudo dkms install --verbose -m mt7902 -v 0.0.1
   ```
 
 - Check status:
   ```
-  sudo dkms status --verbose -m mt7902-dkms -v 0.0.1
+  sudo dkms status --verbose -m mt7902 -v 0.0.1
   ```
 
 - Get rid of this setup in case it's a pain:
   ```
-  sudo dkms uninstall --verbose -m mt7902-dkms -v 0.0.1
-  sudo dkms remove --verbose -m mt7902-dkms -v 0.0.1 --all
-  sudo rm -fR /usr/src/mt7902-dkms\*
+  sudo dkms uninstall --verbose -m mt7902 -v 0.0.1
+  sudo dkms remove --verbose -m mt7902 -v 0.0.1 --all
+  sudo rm -fR /usr/src/mt7902\*
   ```
 
 - Update source
   ```
-  cd /usr/src/mt7902-dkms && sudo git pull
+  cd /usr/src/mt7902 && sudo git pull
   ```
 
 ## PCI ID details
