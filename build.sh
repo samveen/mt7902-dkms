@@ -2,6 +2,7 @@
 
 echo -n "Build env: "; uname -a
 echo "===params==="; echo "'" "$@" "'" ; echo "==========="
+echo "===OSInfo==="; cat /etc/os-release ; echo "============"
 echo "===ENV==="; env ; echo "========="
 
 # Get and parse options
