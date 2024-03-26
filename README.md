@@ -1,5 +1,6 @@
-# HELP NEEDED
-Please help test the build for this. 
+# HELP NEEDED 
+
+Secureboot based module loading needs testing, as my test environment doesn't have secureboot. Please follow the [Ubuntu SecureBoot docs](https://wiki.ubuntu.com/UEFI/SecureBoot/) for details.
 
 # mt7902-dkms
 Create driver for MT7902 by cloning the [MT9721 driver from the kernel](https://github.com/torvalds/linux/tree/master/drivers/net/wireless/mediatek/mt76/mt7921) and modifying it.
@@ -8,7 +9,7 @@ Create driver for MT7902 by cloning the [MT9721 driver from the kernel](https://
 https://github.com/keepsoftware/mt7902-dkms/issues/2
 
 ## Status
-As of now, the code is purely the driver for the mt7921, with just string replacement from mt7921 to mt7902 even in filenames. The build is untested
+As of now, the code is purely the driver for the mt7921, with just string replacement from mt7921 to mt7902 even in filenames. The code builds with DKMS, but loading of the modules and further is untested yet.
 
 ## Requirements
 - Best tested against the [Ubuntu Mainline Kernel](https://wiki.ubuntu.com/Kernel/MainlineBuilds) [v6.8](https://kernel.ubuntu.com/mainline/v6.8/) or greater installed on [Ubuntu 24.04 (Noble Numbat)](https://cloud-images.ubuntu.com/noble/)
