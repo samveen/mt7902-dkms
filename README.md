@@ -51,6 +51,14 @@ As of now, the code is purely the driver for the mt7921, with just string replac
   sudo rm -fR /usr/src/mt7902\*
   ```
 
+- **Firmware download/install** - Downloaded from Acer website and installed into /lib/firmware/mediatek/
+
+  ```
+  cd firmware
+  sudo bash -x get-firmware.sh
+  ```
+
+
 - Update source
   ```
   cd /usr/src/mt7902 && sudo git pull
