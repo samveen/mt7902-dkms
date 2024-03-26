@@ -15,9 +15,9 @@
 #define MT7902_RX_MCU_RING_SIZE		8
 #define MT7902_RX_MCU_WA_RING_SIZE	512
 
-#define MT7902_FIRMWARE_WA		"mediatek/mt7902_wa.bin"
-#define MT7902_FIRMWARE_WM		"mediatek/mt7902_wm.bin"
-#define MT7902_ROM_PATCH		"mediatek/mt7902_rom_patch.bin"
+#define MT7902_FIRMWARE_WM		"mediatek/WIFI_RAM_CODE_MT7902_1.bin"
+#define MT7902_ROM_PATCH		"mediatek/WIFI_MT7902_patch_mcu_1_1_hdr.bin"
+
 
 #define MT7902_EEPROM_SIZE		3584
 #define MT7902_TOKEN_SIZE		8192
