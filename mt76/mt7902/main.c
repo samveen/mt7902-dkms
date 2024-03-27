@@ -127,7 +127,7 @@ mt7902_init_he_caps(struct mt792x_phy *phy, enum nl80211_band band,
 				IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_COMP_SIGB |
 				IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_NON_COMP_SIGB;
 
-			if (is_mt7922(phy->mt76->dev)) {
+			if (is_mt7902(phy->mt76->dev)) {
 				he_cap_elem->phy_cap_info[0] |=
 					IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
 				he_cap_elem->phy_cap_info[8] |=
@@ -139,7 +139,7 @@ mt7902_init_he_caps(struct mt792x_phy *phy, enum nl80211_band band,
 
 		he_mcs->rx_mcs_80 = cpu_to_le16(mcs_map);
 		he_mcs->tx_mcs_80 = cpu_to_le16(mcs_map);
-		if (is_mt7922(phy->mt76->dev)) {
+		if (is_mt7902(phy->mt76->dev)) {
 			he_mcs->rx_mcs_160 = cpu_to_le16(mcs_map);
 			he_mcs->tx_mcs_160 = cpu_to_le16(mcs_map);
 		}
