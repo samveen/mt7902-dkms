@@ -273,12 +273,16 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	u16 cmd;
 
 	ret = pcim_enable_device(pdev);
-	if (ret)
+	if (ret) {
+		pr_info("pcim_enable_device failed: %d\n", ret);
 		return ret;
+	}
 
 	ret = pcim_iomap_regions(pdev, BIT(0), pci_name(pdev));
-	if (ret)
+	if (ret) {
+		pr_info("pcim_iomap_regions failed: %d\n", ret);
 		return ret;
+	}
 
 	pci_read_config_word(pdev, PCI_COMMAND, &cmd);
 	if (!(cmd & PCI_COMMAND_MEMORY)) {
@@ -288,12 +292,16 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	pci_set_master(pdev);
 
 	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_ALL_TYPES);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_info("pci_alloc_irq_vectors failed: %d\n", ret);
 		return ret;
+	}
 
 	ret = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
-	if (ret)
+	if (ret) {
+		pr_info("dma_set_mask failed: %d\n", ret);
 		goto err_free_pci_vec;
+	}
 
 	if (mt7902_disable_aspm)
 		mt76_pci_disable_aspm(pdev);
@@ -307,6 +315,7 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 
 	mdev = mt76_alloc_device(&pdev->dev, sizeof(*dev), ops, &drv_ops);
 	if (!mdev) {
+		pr_info("mt76_alloc_device failed (ENOMEM?)\n");
 		ret = -ENOMEM;
 		goto err_free_pci_vec;
 	}
@@ -327,6 +336,7 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	bus_ops = devm_kmemdup(dev->mt76.dev, dev->bus_ops, sizeof(*bus_ops),
 			       GFP_KERNEL);
 	if (!bus_ops) {
+		dev_info(mdev->dev, "devm_kmemdup bus-opps failed (ENOMEM?)\n");
 		ret = -ENOMEM;
 		goto err_free_dev;
 	}
@@ -337,20 +347,26 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	dev->mt76.bus = bus_ops;
 
 	ret = mt792xe_mcu_fw_pmctrl(dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "__mt792xe_mcu_fw_pmctrl failed: %d\n", ret);
 		goto err_free_dev;
+	}
 
 	ret = __mt792xe_mcu_drv_pmctrl(dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "__mt792xe_mcu_drv_pmctrl failed: %d\n", ret);
 		goto err_free_dev;
+	}
 
 	mdev->rev = (mt7902_l1_rr(dev, MT_HW_CHIPID) << 16) |
 		    (mt7902_l1_rr(dev, MT_HW_REV) & 0xff);
 	dev_info(mdev->dev, "ASIC revision: %04x\n", mdev->rev);
 
 	ret = mt792x_wfsys_reset(dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "mt792x_wfsys_reset failed: %d\n", ret);
 		goto err_free_dev;
+	}
 
 	mt76_wr(dev, irq_map.host_irq_enable, 0);
 
@@ -358,16 +374,22 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 
 	ret = devm_request_irq(mdev->dev, pdev->irq, mt792x_irq_handler,
 			       IRQF_SHARED, KBUILD_MODNAME, dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "devm_request_irq failed: %d\n", ret);
 		goto err_free_dev;
+	}
 
 	ret = mt7902_dma_init(dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "mt7902_dma_init failed: %d\n", ret);
 		goto err_free_irq;
+	}
 
 	ret = mt7902_register_device(dev);
-	if (ret)
+	if (ret) {
+		dev_info(mdev->dev, "mt7902_register_device failed failed: %d\n", ret);
 		goto err_free_irq;
+	}
 
 	return 0;
 
