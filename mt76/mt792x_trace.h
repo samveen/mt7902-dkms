@@ -10,7 +10,7 @@
 #include "mt792x.h"
 
 #undef TRACE_SYSTEM
-#define TRACE_SYSTEM mt792x
+#define TRACE_SYSTEM mt7902_mt792x
 
 #define MAXNAME		32
 #define DEV_ENTRY	__array(char, wiphy_name, 32)
@@ -46,6 +46,6 @@ TRACE_EVENT(lp_event,
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH .
 #undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_FILE mt792x_trace
+#define TRACE_INCLUDE_FILE mt7902_mt792x_trace
 
 #include <trace/define_trace.h>
