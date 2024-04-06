@@ -16,13 +16,13 @@ static ssize_t mt7902_thermal_temp_show(struct device *dev,
 {
 	switch (to_sensor_dev_attr(attr)->index) {
 	case 0: {
-		struct mt792x_phy *phy = dev_get_drvdata(dev);
-		struct mt792x_dev *mdev = phy->dev;
+		struct mt7902_mt792x_phy *phy = dev_get_drvdata(dev);
+		struct mt7902_mt792x_dev *mdev = phy->dev;
 		int temperature;
 
-		mt792x_mutex_acquire(mdev);
+		mt7902_mt792x_mutex_acquire(mdev);
 		temperature = mt7902_mcu_get_temperature(phy);
-		mt792x_mutex_release(mdev);
+		mt7902_mt792x_mutex_release(mdev);
 
 		if (temperature < 0)
 			return temperature;
@@ -41,7 +41,7 @@ static struct attribute *mt7902_hwmon_attrs[] = {
 };
 ATTRIBUTE_GROUPS(mt7902_hwmon);
 
-static int mt7902_thermal_init(struct mt792x_phy *phy)
+static int mt7902_thermal_init(struct mt7902_mt792x_phy *phy)
 {
 	struct wiphy *wiphy = phy->mt76->hw->wiphy;
 	struct device *hwmon;
@@ -59,7 +59,7 @@ static int mt7902_thermal_init(struct mt792x_phy *phy)
 }
 
 static void
-mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
+mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 {
 #define IS_UNII_INVALID(idx, sfreq, efreq) \
 	(!(dev->phy.clc_chan_conf & BIT(idx)) && (cfreq) >= (sfreq) && (cfreq) <= (efreq))
@@ -110,7 +110,7 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
 	}
 }
 
-void mt7902_regd_update(struct mt792x_dev *dev)
+void mt7902_regd_update(struct mt7902_mt792x_dev *dev)
 {
 	struct mt76_dev *mdev = &dev->mt76;
 	struct ieee80211_hw *hw = mdev->hw;
@@ -128,7 +128,7 @@ mt7902_regd_notifier(struct wiphy *wiphy,
 		     struct regulatory_request *request)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
-	struct mt792x_dev *dev = mt792x_hw_dev(hw);
+	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
 	struct mt76_connac_pm *pm = &dev->pm;
 
 	memcpy(dev->mt76.alpha2, request->alpha2, sizeof(dev->mt76.alpha2));
@@ -138,12 +138,12 @@ mt7902_regd_notifier(struct wiphy *wiphy,
 	if (pm->suspended)
 		return;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	mt7902_regd_update(dev);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 }
 
-int mt7902_mac_init(struct mt792x_dev *dev)
+int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 {
 	int i;
 
@@ -157,13 +157,13 @@ int mt7902_mac_init(struct mt792x_dev *dev)
 		mt7902_mac_wtbl_update(dev, i,
 				       MT_WTBL_UPDATE_ADM_COUNT_CLEAR);
 	for (i = 0; i < 2; i++)
-		mt792x_mac_init_band(dev, i);
+		mt7902_mt792x_mac_init_band(dev, i);
 
 	return mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_init);
 
-static int __mt7902_init_hardware(struct mt792x_dev *dev)
+static int __mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 {
 	int ret;
 
@@ -171,7 +171,7 @@ static int __mt7902_init_hardware(struct mt792x_dev *dev)
 	 * which should be set before firmware download stage.
 	 */
 	mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
-	ret = mt792x_mcu_init(dev);
+	ret = mt7902_mt792x_mcu_init(dev);
 	if (ret)
 		goto out;
 
@@ -186,7 +186,7 @@ out:
 	return ret;
 }
 
-static int mt7902_init_hardware(struct mt792x_dev *dev)
+static int mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 {
 	int ret, i;
 
@@ -197,7 +197,7 @@ static int mt7902_init_hardware(struct mt792x_dev *dev)
 		if (!ret)
 			break;
 
-		mt792x_init_reset(dev);
+		mt7902_mt792x_init_reset(dev);
 	}
 
 	if (i == MT792x_MCU_INIT_RETRY_COUNT) {
@@ -210,7 +210,7 @@ static int mt7902_init_hardware(struct mt792x_dev *dev)
 
 static void mt7902_init_work(struct work_struct *work)
 {
-	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,
+	struct mt7902_mt792x_dev *dev = container_of(work, struct mt7902_mt792x_dev,
 					      init_work);
 	int ret;
 
@@ -246,7 +246,7 @@ static void mt7902_init_work(struct work_struct *work)
 	mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
 }
 
-int mt7902_register_device(struct mt792x_dev *dev)
+int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 {
 	struct ieee80211_hw *hw = mt76_hw(dev);
 	int ret;
@@ -254,17 +254,17 @@ int mt7902_register_device(struct mt792x_dev *dev)
 	dev->phy.dev = dev;
 	dev->phy.mt76 = &dev->mt76.phy;
 	dev->mt76.phy.priv = &dev->phy;
-	dev->mt76.tx_worker.fn = mt792x_tx_worker;
+	dev->mt76.tx_worker.fn = mt7902_mt792x_tx_worker;
 
-	INIT_DELAYED_WORK(&dev->pm.ps_work, mt792x_pm_power_save_work);
-	INIT_WORK(&dev->pm.wake_work, mt792x_pm_wake_work);
+	INIT_DELAYED_WORK(&dev->pm.ps_work, mt7902_mt792x_pm_power_save_work);
+	INIT_WORK(&dev->pm.wake_work, mt7902_mt792x_pm_wake_work);
 	spin_lock_init(&dev->pm.wake.lock);
 	mutex_init(&dev->pm.mutex);
 	init_waitqueue_head(&dev->pm.wait);
 	if (mt76_is_sdio(&dev->mt76))
 		init_waitqueue_head(&dev->mt76.sdio.wait);
 	spin_lock_init(&dev->pm.txq_lock);
-	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt792x_mac_work);
+	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt7902_mt792x_mac_work);
 	INIT_DELAYED_WORK(&dev->phy.scan_work, mt7902_scan_work);
 	INIT_DELAYED_WORK(&dev->coredump.work, mt7902_coredump_work);
 #if IS_ENABLED(CONFIG_IPV6)
@@ -278,7 +278,7 @@ int mt7902_register_device(struct mt792x_dev *dev)
 	INIT_WORK(&dev->init_work, mt7902_init_work);
 
 	INIT_WORK(&dev->phy.roc_work, mt7902_roc_work);
-	timer_setup(&dev->phy.roc_timer, mt792x_roc_timer, 0);
+	timer_setup(&dev->phy.roc_timer, mt7902_mt792x_roc_timer, 0);
 	init_waitqueue_head(&dev->phy.roc_wait);
 
 	dev->pm.idle_timeout = MT792x_PM_TIMEOUT;
@@ -294,13 +294,13 @@ int mt7902_register_device(struct mt792x_dev *dev)
 	if (!mt76_is_mmio(&dev->mt76))
 		hw->extra_tx_headroom += MT_SDIO_TXD_SIZE + MT_SDIO_HDR_SIZE;
 
-	mt792x_init_acpi_sar(dev);
+	mt7902_mt792x_init_acpi_sar(dev);
 
-	ret = mt792x_init_wcid(dev);
+	ret = mt7902_mt792x_init_wcid(dev);
 	if (ret)
 		return ret;
 
-	ret = mt792x_init_wiphy(hw);
+	ret = mt7902_mt792x_init_wiphy(hw);
 	if (ret)
 		return ret;
 

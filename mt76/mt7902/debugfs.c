@@ -6,11 +6,11 @@
 static int
 mt7902_reg_set(void *data, u64 val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	mt76_wr(dev, dev->mt76.debugfs_reg, val);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
 }
@@ -18,11 +18,11 @@ mt7902_reg_set(void *data, u64 val)
 static int
 mt7902_reg_get(void *data, u64 *val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	*val = mt76_rr(dev, dev->mt76.debugfs_reg);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
 }
@@ -32,14 +32,14 @@ DEFINE_DEBUGFS_ATTRIBUTE(fops_regval, mt7902_reg_get, mt7902_reg_set,
 static int
 mt7902_fw_debug_set(void *data, u64 val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 
 	dev->fw_debug = (u8)val;
 	mt7902_mcu_fw_log_2_host(dev, dev->fw_debug);
 
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
 }
@@ -47,7 +47,7 @@ mt7902_fw_debug_set(void *data, u64 val)
 static int
 mt7902_fw_debug_get(void *data, u64 *val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
 	*val = dev->fw_debug;
 
@@ -57,7 +57,7 @@ mt7902_fw_debug_get(void *data, u64 *val)
 DEFINE_DEBUGFS_ATTRIBUTE(fops_fw_debug, mt7902_fw_debug_get,
 			 mt7902_fw_debug_set, "%lld\n");
 
-DEFINE_SHOW_ATTRIBUTE(mt792x_tx_stats);
+DEFINE_SHOW_ATTRIBUTE(mt7902_mt792x_tx_stats);
 
 static void
 mt7902_seq_puts_array(struct seq_file *file, const char *str,
@@ -90,13 +90,13 @@ mt7902_seq_puts_array(struct seq_file *file, const char *str,
 static int
 mt7902_txpwr(struct seq_file *s, void *data)
 {
-	struct mt792x_dev *dev = dev_get_drvdata(s->private);
+	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
 	struct mt7902_txpwr txpwr;
 	int ret;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	ret = mt7902_get_txpwr_info(dev, &txpwr);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	if (ret)
 		return ret;
@@ -142,7 +142,7 @@ mt7902_txpwr(struct seq_file *s, void *data)
 static int
 mt7902_pm_set(void *data, u64 val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 	struct mt76_connac_pm *pm = &dev->pm;
 
 	if (mt76_is_usb(&dev->mt76))
@@ -175,7 +175,7 @@ out:
 static int
 mt7902_pm_get(void *data, u64 *val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
 	*val = dev->pm.enable_user;
 
@@ -187,7 +187,7 @@ DEFINE_DEBUGFS_ATTRIBUTE(fops_pm, mt7902_pm_get, mt7902_pm_set, "%lld\n");
 static int
 mt7902_deep_sleep_set(void *data, u64 val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 	struct mt76_connac_pm *pm = &dev->pm;
 	bool monitor = !!(dev->mphy.hw->conf.flags & IEEE80211_CONF_MONITOR);
 	bool enable = !!val;
@@ -195,7 +195,7 @@ mt7902_deep_sleep_set(void *data, u64 val)
 	if (mt76_is_usb(&dev->mt76))
 		return -EOPNOTSUPP;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	if (pm->ds_enable_user == enable)
 		goto out;
 
@@ -203,7 +203,7 @@ mt7902_deep_sleep_set(void *data, u64 val)
 	pm->ds_enable = enable && !monitor;
 	mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
 out:
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
 }
@@ -211,7 +211,7 @@ out:
 static int
 mt7902_deep_sleep_get(void *data, u64 *val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 
 	*val = dev->pm.ds_enable_user;
 
@@ -221,24 +221,24 @@ mt7902_deep_sleep_get(void *data, u64 *val)
 DEFINE_DEBUGFS_ATTRIBUTE(fops_ds, mt7902_deep_sleep_get,
 			 mt7902_deep_sleep_set, "%lld\n");
 
-DEFINE_DEBUGFS_ATTRIBUTE(fops_pm_idle_timeout, mt792x_pm_idle_timeout_get,
-			 mt792x_pm_idle_timeout_set, "%lld\n");
+DEFINE_DEBUGFS_ATTRIBUTE(fops_pm_idle_timeout, mt7902_mt792x_pm_idle_timeout_get,
+			 mt7902_mt792x_pm_idle_timeout_set, "%lld\n");
 
 static int mt7902_chip_reset(void *data, u64 val)
 {
-	struct mt792x_dev *dev = data;
+	struct mt7902_mt792x_dev *dev = data;
 	int ret = 0;
 
 	switch (val) {
 	case 1:
 		/* Reset wifisys directly. */
-		mt792x_reset(&dev->mt76);
+		mt7902_mt792x_reset(&dev->mt76);
 		break;
 	default:
 		/* Collect the core dump before reset wifisys. */
-		mt792x_mutex_acquire(dev);
+		mt7902_mt792x_mutex_acquire(dev);
 		ret = mt76_connac_mcu_chip_config(&dev->mt76);
-		mt792x_mutex_release(dev);
+		mt7902_mt792x_mutex_release(dev);
 		break;
 	}
 
@@ -250,7 +250,7 @@ DEFINE_DEBUGFS_ATTRIBUTE(fops_reset, NULL, mt7902_chip_reset, "%lld\n");
 static int
 mt7902s_sched_quota_read(struct seq_file *s, void *data)
 {
-	struct mt792x_dev *dev = dev_get_drvdata(s->private);
+	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
 	struct mt76_sdio *sdio = &dev->mt76.sdio;
 
 	seq_printf(s, "pse_data_quota\t%d\n", sdio->sched.pse_data_quota);
@@ -261,7 +261,7 @@ mt7902s_sched_quota_read(struct seq_file *s, void *data)
 	return 0;
 }
 
-int mt7902_init_debugfs(struct mt792x_dev *dev)
+int mt7902_init_debugfs(struct mt7902_mt792x_dev *dev)
 {
 	struct dentry *dir;
 
@@ -271,23 +271,23 @@ int mt7902_init_debugfs(struct mt792x_dev *dev)
 
 	if (mt76_is_mmio(&dev->mt76))
 		debugfs_create_devm_seqfile(dev->mt76.dev, "xmit-queues",
-					    dir, mt792x_queues_read);
+					    dir, mt7902_mt792x_queues_read);
 	else
 		debugfs_create_devm_seqfile(dev->mt76.dev, "xmit-queues",
 					    dir, mt76_queues_read);
 
 	debugfs_create_devm_seqfile(dev->mt76.dev, "acq", dir,
-				    mt792x_queues_acq);
+				    mt7902_mt792x_queues_acq);
 	debugfs_create_devm_seqfile(dev->mt76.dev, "txpower_sku", dir,
 				    mt7902_txpwr);
-	debugfs_create_file("tx_stats", 0400, dir, dev, &mt792x_tx_stats_fops);
+	debugfs_create_file("tx_stats", 0400, dir, dev, &mt7902_mt792x_tx_stats_fops);
 	debugfs_create_file("fw_debug", 0600, dir, dev, &fops_fw_debug);
 	debugfs_create_file("runtime-pm", 0600, dir, dev, &fops_pm);
 	debugfs_create_file("idle-timeout", 0600, dir, dev,
 			    &fops_pm_idle_timeout);
 	debugfs_create_file("chip_reset", 0600, dir, dev, &fops_reset);
 	debugfs_create_devm_seqfile(dev->mt76.dev, "runtime_pm_stats", dir,
-				    mt792x_pm_stats);
+				    mt7902_mt792x_pm_stats);
 	debugfs_create_file("deep-sleep", 0600, dir, dev, &fops_ds);
 	if (mt76_is_sdio(&dev->mt76))
 		debugfs_create_devm_seqfile(dev->mt76.dev, "sched-quota", dir,

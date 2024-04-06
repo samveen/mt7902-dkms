@@ -30,12 +30,12 @@ static bool mt7902_disable_aspm;
 module_param_named(disable_aspm, mt7902_disable_aspm, bool, 0644);
 MODULE_PARM_DESC(disable_aspm, "disable PCI ASPM support");
 
-static int mt7902e_init_reset(struct mt792x_dev *dev)
+static int mt7902e_init_reset(struct mt7902_mt792x_dev *dev)
 {
-	return mt792x_wpdma_reset(dev, true);
+	return mt7902_mt792x_wpdma_reset(dev, true);
 }
 
-static void mt7902e_unregister_device(struct mt792x_dev *dev)
+static void mt7902e_unregister_device(struct mt7902_mt792x_dev *dev)
 {
 	int i;
 	struct mt76_connac_pm *pm = &dev->pm;
@@ -49,15 +49,15 @@ static void mt7902e_unregister_device(struct mt792x_dev *dev)
 	cancel_work_sync(&dev->reset_work);
 
 	mt76_connac2_tx_token_put(&dev->mt76);
-	__mt792x_mcu_drv_pmctrl(dev);
-	mt792x_dma_cleanup(dev);
-	mt792x_wfsys_reset(dev);
+	__mt7902_mt792x_mcu_drv_pmctrl(dev);
+	mt7902_mt792x_dma_cleanup(dev);
+	mt7902_mt792x_wfsys_reset(dev);
 	skb_queue_purge(&dev->mt76.mcu.res_q);
 
 	tasklet_disable(&dev->mt76.irq_tasklet);
 }
 
-static u32 __mt7902_reg_addr(struct mt792x_dev *dev, u32 addr)
+static u32 __mt7902_reg_addr(struct mt7902_mt792x_dev *dev, u32 addr)
 {
 	static const struct mt76_connac_reg_map fixed_map[] = {
 		{ 0x820d0000, 0x30000, 0x10000 }, /* WF_LMAC_TOP (WF_WTBLON) */
@@ -136,7 +136,7 @@ static u32 __mt7902_reg_addr(struct mt792x_dev *dev, u32 addr)
 
 static u32 mt7902_rr(struct mt76_dev *mdev, u32 offset)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	u32 addr = __mt7902_reg_addr(dev, offset);
 
 	return dev->bus_ops->rr(mdev, addr);
@@ -144,7 +144,7 @@ static u32 mt7902_rr(struct mt76_dev *mdev, u32 offset)
 
 static void mt7902_wr(struct mt76_dev *mdev, u32 offset, u32 val)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	u32 addr = __mt7902_reg_addr(dev, offset);
 
 	dev->bus_ops->wr(mdev, addr, val);
@@ -152,19 +152,19 @@ static void mt7902_wr(struct mt76_dev *mdev, u32 offset, u32 val)
 
 static u32 mt7902_rmw(struct mt76_dev *mdev, u32 offset, u32 mask, u32 val)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	u32 addr = __mt7902_reg_addr(dev, offset);
 
 	return dev->bus_ops->rmw(mdev, addr, mask, val);
 }
 
-static int mt7902_dma_init(struct mt792x_dev *dev)
+static int mt7902_dma_init(struct mt7902_mt792x_dev *dev)
 {
 	int ret;
 
 	mt76_dma_attach(&dev->mt76);
 
-	ret = mt792x_dma_disable(dev, true);
+	ret = mt7902_mt792x_dma_disable(dev, true);
 	if (ret)
 		return ret;
 
@@ -212,15 +212,15 @@ static int mt7902_dma_init(struct mt792x_dev *dev)
 	if (ret)
 		return ret;
 
-	ret = mt76_init_queues(dev, mt792x_poll_rx);
+	ret = mt76_init_queues(dev, mt7902_mt792x_poll_rx);
 	if (ret < 0)
 		return ret;
 
 	netif_napi_add_tx(&dev->mt76.tx_napi_dev, &dev->mt76.tx_napi,
-			  mt792x_poll_tx);
+			  mt7902_mt792x_poll_tx);
 	napi_enable(&dev->mt76.tx_napi);
 
-	return mt792x_dma_enable(dev);
+	return mt7902_mt792x_dma_enable(dev);
 }
 
 static int mt7902_pci_probe(struct pci_dev *pdev,
@@ -239,20 +239,20 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 		.tx_complete_skb = mt76_connac_tx_complete_skb,
 		.rx_check = mt7902_rx_check,
 		.rx_skb = mt7902_queue_rx_skb,
-		.rx_poll_complete = mt792x_rx_poll_complete,
+		.rx_poll_complete = mt7902_mt792x_rx_poll_complete,
 		.sta_add = mt7902_mac_sta_add,
 		.sta_assoc = mt7902_mac_sta_assoc,
 		.sta_remove = mt7902_mac_sta_remove,
-		.update_survey = mt792x_update_channel,
+		.update_survey = mt7902_mt792x_update_channel,
 	};
-	static const struct mt792x_hif_ops mt7902_pcie_ops = {
+	static const struct mt7902_mt792x_hif_ops mt7902_pcie_ops = {
 		.init_reset = mt7902e_init_reset,
 		.reset = mt7902e_mac_reset,
 		.mcu_init = mt7902e_mcu_init,
-		.drv_own = mt792xe_mcu_drv_pmctrl,
-		.fw_own = mt792xe_mcu_fw_pmctrl,
+		.drv_own = mt7902_mt792xe_mcu_drv_pmctrl,
+		.fw_own = mt7902_mt792xe_mcu_fw_pmctrl,
 	};
-	static const struct mt792x_irq_map irq_map = {
+	static const struct mt7902_mt792x_irq_map irq_map = {
 		.host_irq_enable = MT_WFDMA0_HOST_INT_ENA,
 		.tx = {
 			.all_complete_mask = MT_INT_TX_DONE_ALL,
@@ -266,7 +266,7 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	};
 	struct ieee80211_ops *ops;
 	struct mt76_bus_ops *bus_ops;
-	struct mt792x_dev *dev;
+	struct mt7902_mt792x_dev *dev;
 	struct mt76_dev *mdev;
 	u8 features;
 	int ret;
@@ -306,7 +306,7 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	if (mt7902_disable_aspm)
 		mt76_pci_disable_aspm(pdev);
 
-	ops = mt792x_get_mac80211_ops(&pdev->dev, &mt7902_ops,
+	ops = mt7902_mt792x_get_mac80211_ops(&pdev->dev, &mt7902_ops,
 				      (void *)id->driver_data, &features);
 	if (!ops) {
 		ret = -ENOMEM;
@@ -322,12 +322,12 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 
 	pci_set_drvdata(pdev, mdev);
 
-	dev = container_of(mdev, struct mt792x_dev, mt76);
+	dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	dev->fw_features = features;
 	dev->hif_ops = &mt7902_pcie_ops;
 	dev->irq_map = &irq_map;
 	mt76_mmio_init(&dev->mt76, pcim_iomap_table(pdev)[0]);
-	tasklet_init(&mdev->irq_tasklet, mt792x_irq_tasklet, (unsigned long)dev);
+	tasklet_init(&mdev->irq_tasklet, mt7902_mt792x_irq_tasklet, (unsigned long)dev);
 
 	dev->phy.dev = dev;
 	dev->phy.mt76 = &dev->mt76.phy;
@@ -346,15 +346,15 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 	bus_ops->rmw = mt7902_rmw;
 	dev->mt76.bus = bus_ops;
 
-	ret = mt792xe_mcu_fw_pmctrl(dev);
+	ret = mt7902_mt792xe_mcu_fw_pmctrl(dev);
 	if (ret) {
-		dev_info(mdev->dev, "__mt792xe_mcu_fw_pmctrl failed: %d\n", ret);
+		dev_info(mdev->dev, "__mt7902_mt792xe_mcu_fw_pmctrl failed: %d\n", ret);
 		goto err_free_dev;
 	}
 
-	ret = __mt792xe_mcu_drv_pmctrl(dev);
+	ret = __mt7902_mt792xe_mcu_drv_pmctrl(dev);
 	if (ret) {
-		dev_info(mdev->dev, "__mt792xe_mcu_drv_pmctrl failed: %d\n", ret);
+		dev_info(mdev->dev, "__mt7902_mt792xe_mcu_drv_pmctrl failed: %d\n", ret);
 		goto err_free_dev;
 	}
 
@@ -362,9 +362,9 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 		    (mt7902_l1_rr(dev, MT_HW_REV) & 0xff);
 	dev_info(mdev->dev, "ASIC revision: %04x\n", mdev->rev);
 
-	ret = mt792x_wfsys_reset(dev);
+	ret = mt7902_mt792x_wfsys_reset(dev);
 	if (ret) {
-		dev_info(mdev->dev, "mt792x_wfsys_reset failed: %d\n", ret);
+		dev_info(mdev->dev, "mt7902_mt792x_wfsys_reset failed: %d\n", ret);
 		goto err_free_dev;
 	}
 
@@ -372,7 +372,7 @@ static int mt7902_pci_probe(struct pci_dev *pdev,
 
 	mt76_wr(dev, MT_PCIE_MAC_INT_ENABLE, 0xff);
 
-	ret = devm_request_irq(mdev->dev, pdev->irq, mt792x_irq_handler,
+	ret = devm_request_irq(mdev->dev, pdev->irq, mt7902_mt792x_irq_handler,
 			       IRQF_SHARED, KBUILD_MODNAME, dev);
 	if (ret) {
 		dev_info(mdev->dev, "devm_request_irq failed: %d\n", ret);
@@ -406,7 +406,7 @@ err_free_pci_vec:
 static void mt7902_pci_remove(struct pci_dev *pdev)
 {
 	struct mt76_dev *mdev = pci_get_drvdata(pdev);
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 
 	mt7902e_unregister_device(dev);
 	devm_free_irq(&pdev->dev, pdev->irq, dev);
@@ -418,7 +418,7 @@ static int mt7902_pci_suspend(struct device *device)
 {
 	struct pci_dev *pdev = to_pci_dev(device);
 	struct mt76_dev *mdev = pci_get_drvdata(pdev);
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	struct mt76_connac_pm *pm = &dev->pm;
 	int i, err;
 
@@ -427,7 +427,7 @@ static int mt7902_pci_suspend(struct device *device)
 	cancel_delayed_work_sync(&pm->ps_work);
 	cancel_work_sync(&pm->wake_work);
 
-	err = mt792x_mcu_drv_pmctrl(dev);
+	err = mt7902_mt792x_mcu_drv_pmctrl(dev);
 	if (err < 0)
 		goto restore_suspend;
 
@@ -462,7 +462,7 @@ static int mt7902_pci_suspend(struct device *device)
 	synchronize_irq(pdev->irq);
 	tasklet_kill(&mdev->irq_tasklet);
 
-	err = mt792x_mcu_fw_pmctrl(dev);
+	err = mt7902_mt792x_mcu_fw_pmctrl(dev);
 	if (err)
 		goto restore_napi;
 
@@ -483,7 +483,7 @@ restore_suspend:
 	pm->suspended = false;
 
 	if (err < 0)
-		mt792x_reset(&dev->mt76);
+		mt7902_mt792x_reset(&dev->mt76);
 
 	return err;
 }
@@ -492,15 +492,15 @@ static int mt7902_pci_resume(struct device *device)
 {
 	struct pci_dev *pdev = to_pci_dev(device);
 	struct mt76_dev *mdev = pci_get_drvdata(pdev);
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	struct mt76_connac_pm *pm = &dev->pm;
 	int i, err;
 
-	err = mt792x_mcu_drv_pmctrl(dev);
+	err = mt7902_mt792x_mcu_drv_pmctrl(dev);
 	if (err < 0)
 		goto failed;
 
-	mt792x_wpdma_reinit_cond(dev);
+	mt7902_mt792x_wpdma_reinit_cond(dev);
 
 	/* enable interrupt */
 	mt76_wr(dev, MT_PCIE_MAC_INT_ENABLE, 0xff);
@@ -536,7 +536,7 @@ failed:
 	pm->suspended = false;
 
 	if (err < 0)
-		mt792x_reset(&dev->mt76);
+		mt7902_mt792x_reset(&dev->mt76);
 
 	return err;
 }

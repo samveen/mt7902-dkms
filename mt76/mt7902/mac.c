@@ -15,7 +15,7 @@
 
 #define MT_WTBL_AC0_CTT_OFFSET		20
 
-bool mt7902_mac_wtbl_update(struct mt792x_dev *dev, int idx, u32 mask)
+bool mt7902_mac_wtbl_update(struct mt7902_mt792x_dev *dev, int idx, u32 mask)
 {
 	mt76_rmw(dev, MT_WTBL_UPDATE, MT_WTBL_UPDATE_WLAN_IDX,
 		 FIELD_PREP(MT_WTBL_UPDATE_WLAN_IDX, idx) | mask);
@@ -29,7 +29,7 @@ static u32 mt7902_mac_wtbl_lmac_addr(int idx, u8 offset)
 	return MT_WTBL_LMAC_OFFS(idx, 0) + offset * 4;
 }
 
-static void mt7902_mac_sta_poll(struct mt792x_dev *dev)
+static void mt7902_mac_sta_poll(struct mt7902_mt792x_dev *dev)
 {
 	static const u8 ac_to_tid[] = {
 		[IEEE80211_AC_BE] = 0,
@@ -38,7 +38,7 @@ static void mt7902_mac_sta_poll(struct mt792x_dev *dev)
 		[IEEE80211_AC_VO] = 6
 	};
 	struct ieee80211_sta *sta;
-	struct mt792x_sta *msta;
+	struct mt7902_mt792x_sta *msta;
 	u32 tx_time[IEEE80211_NUM_ACS], rx_time[IEEE80211_NUM_ACS];
 	LIST_HEAD(sta_poll_list);
 	struct rate_info *rate;
@@ -61,7 +61,7 @@ static void mt7902_mac_sta_poll(struct mt792x_dev *dev)
 			break;
 		}
 		msta = list_first_entry(&sta_poll_list,
-					struct mt792x_sta, wcid.poll_list);
+					struct mt7902_mt792x_sta, wcid.poll_list);
 		list_del_init(&msta->wcid.poll_list);
 		spin_unlock_bh(&dev->mt76.sta_poll_lock);
 
@@ -162,7 +162,7 @@ static void mt7902_mac_sta_poll(struct mt792x_dev *dev)
 }
 
 static int
-mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
+mt7902_mac_fill_rx(struct mt7902_mt792x_dev *dev, struct sk_buff *skb)
 {
 	u32 csum_mask = MT_RXD0_NORMAL_IP_SUM | MT_RXD0_NORMAL_UDP_TCP_SUM;
 	struct mt76_rx_status *status = (struct mt76_rx_status *)skb->cb;
@@ -171,7 +171,7 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 	u16 hdr_gap;
 	__le32 *rxv = NULL, *rxd = (__le32 *)skb->data;
 	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt792x_phy *phy = &dev->phy;
+	struct mt7902_mt792x_phy *phy = &dev->phy;
 	struct ieee80211_supported_band *sband;
 	u32 csum_status = *(u32 *)skb->cb;
 	u32 rxd0 = le32_to_cpu(rxd[0]);
@@ -179,7 +179,7 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 	u32 rxd2 = le32_to_cpu(rxd[2]);
 	u32 rxd3 = le32_to_cpu(rxd[3]);
 	u32 rxd4 = le32_to_cpu(rxd[4]);
-	struct mt792x_sta *msta = NULL;
+	struct mt7902_mt792x_sta *msta = NULL;
 	u16 seq_ctrl = 0;
 	__le16 fc = 0;
 	u8 mode = 0;
@@ -207,10 +207,10 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 	chfreq = FIELD_GET(MT_RXD3_NORMAL_CH_FREQ, rxd3);
 	unicast = FIELD_GET(MT_RXD3_NORMAL_ADDR_TYPE, rxd3) == MT_RXD3_NORMAL_U2M;
 	idx = FIELD_GET(MT_RXD1_NORMAL_WLAN_IDX, rxd1);
-	status->wcid = mt792x_rx_get_wcid(dev, idx, unicast);
+	status->wcid = mt7902_mt792x_rx_get_wcid(dev, idx, unicast);
 
 	if (status->wcid) {
-		msta = container_of(status->wcid, struct mt792x_sta, wcid);
+		msta = container_of(status->wcid, struct mt7902_mt792x_sta, wcid);
 		spin_lock_bh(&dev->mt76.sta_poll_lock);
 		if (list_empty(&msta->wcid.poll_list))
 			list_add_tail(&msta->wcid.poll_list,
@@ -218,7 +218,7 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 		spin_unlock_bh(&dev->mt76.sta_poll_lock);
 	}
 
-	mt792x_get_status_freq_info(status, chfreq);
+	mt7902_mt792x_get_status_freq_info(status, chfreq);
 
 	switch (status->band) {
 	case NL80211_BAND_5GHZ:
@@ -427,7 +427,7 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 		status->flag |= RX_FLAG_8023;
 	}
 
-	mt792x_mac_assoc_rssi(dev, skb);
+	mt7902_mt792x_mac_assoc_rssi(dev, skb);
 
 	if (rxv && mode >= MT_PHY_TYPE_HE_SU && !(status->flag & RX_FLAG_8023))
 		mt76_connac2_mac_decode_he_radiotap(&dev->mt76, skb, rxv, mode);
@@ -442,9 +442,9 @@ mt7902_mac_fill_rx(struct mt792x_dev *dev, struct sk_buff *skb)
 	return 0;
 }
 
-void mt7902_mac_add_txs(struct mt792x_dev *dev, void *data)
+void mt7902_mac_add_txs(struct mt7902_mt792x_dev *dev, void *data)
 {
-	struct mt792x_sta *msta = NULL;
+	struct mt7902_mt792x_sta *msta = NULL;
 	struct mt76_wcid *wcid;
 	__le32 *txs_data = data;
 	u16 wcidx;
@@ -468,7 +468,7 @@ void mt7902_mac_add_txs(struct mt792x_dev *dev, void *data)
 	if (!wcid)
 		goto out;
 
-	msta = container_of(wcid, struct mt792x_sta, wcid);
+	msta = container_of(wcid, struct mt7902_mt792x_sta, wcid);
 
 	mt76_connac2_mac_add_txs_skb(&dev->mt76, wcid, pid, txs_data);
 	if (!wcid->sta)
@@ -483,7 +483,7 @@ out:
 	rcu_read_unlock();
 }
 
-static void mt7902_mac_tx_free(struct mt792x_dev *dev, void *data, int len)
+static void mt7902_mac_tx_free(struct mt7902_mt792x_dev *dev, void *data, int len)
 {
 	struct mt76_connac_tx_free *free = data;
 	__le32 *tx_info = (__le32 *)(data + sizeof(*free));
@@ -513,7 +513,7 @@ static void mt7902_mac_tx_free(struct mt792x_dev *dev, void *data, int len)
 		 * 1'b0: msdu_id with the same 'wcid pair' as above.
 		 */
 		if (info & MT_TX_FREE_PAIR) {
-			struct mt792x_sta *msta;
+			struct mt7902_mt792x_sta *msta;
 			u16 idx;
 
 			count++;
@@ -523,7 +523,7 @@ static void mt7902_mac_tx_free(struct mt792x_dev *dev, void *data, int len)
 			if (!sta)
 				continue;
 
-			msta = container_of(wcid, struct mt792x_sta, wcid);
+			msta = container_of(wcid, struct mt7902_mt792x_sta, wcid);
 			spin_lock_bh(&mdev->sta_poll_lock);
 			if (list_empty(&msta->wcid.poll_list))
 				list_add_tail(&msta->wcid.poll_list,
@@ -565,7 +565,7 @@ static void mt7902_mac_tx_free(struct mt792x_dev *dev, void *data, int len)
 
 bool mt7902_rx_check(struct mt76_dev *mdev, void *data, int len)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	__le32 *rxd = (__le32 *)data;
 	__le32 *end = (__le32 *)&rxd[len / 4];
 	enum rx_pkt_type type;
@@ -590,7 +590,7 @@ EXPORT_SYMBOL_GPL(mt7902_rx_check);
 void mt7902_queue_rx_skb(struct mt76_dev *mdev, enum mt76_rxq_id q,
 			 struct sk_buff *skb, u32 *info)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	__le32 *rxd = (__le32 *)skb->data;
 	__le32 *end = (__le32 *)&skb->data[skb->len];
 	enum rx_pkt_type type;
@@ -634,8 +634,8 @@ static void
 mt7902_vif_connect_iter(void *priv, u8 *mac,
 			struct ieee80211_vif *vif)
 {
-	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
-	struct mt792x_dev *dev = mvif->phy->dev;
+	struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
+	struct mt7902_mt792x_dev *dev = mvif->phy->dev;
 	struct ieee80211_hw *hw = mt76_hw(dev);
 
 	if (vif->type == NL80211_IFTYPE_STATION)
@@ -656,7 +656,7 @@ mt7902_vif_connect_iter(void *priv, u8 *mac,
 /* system error recovery */
 void mt7902_mac_reset_work(struct work_struct *work)
 {
-	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,
+	struct mt7902_mt792x_dev *dev = container_of(work, struct mt7902_mt792x_dev,
 					      reset_work);
 	struct ieee80211_hw *hw = mt76_hw(dev);
 	struct mt76_connac_pm *pm = &dev->pm;
@@ -672,7 +672,7 @@ void mt7902_mac_reset_work(struct work_struct *work)
 
 	for (i = 0; i < 10; i++) {
 		mutex_lock(&dev->mt76.mutex);
-		ret = mt792x_dev_reset(dev);
+		ret = mt7902_mt792x_dev_reset(dev);
 		mutex_unlock(&dev->mt76.mutex);
 
 		if (!ret)
@@ -701,10 +701,10 @@ void mt7902_mac_reset_work(struct work_struct *work)
 
 void mt7902_coredump_work(struct work_struct *work)
 {
-	struct mt792x_dev *dev;
+	struct mt7902_mt792x_dev *dev;
 	char *dump, *data;
 
-	dev = (struct mt792x_dev *)container_of(work, struct mt792x_dev,
+	dev = (struct mt7902_mt792x_dev *)container_of(work, struct mt7902_mt792x_dev,
 						coredump.work.work);
 
 	if (time_is_after_jiffies(dev->coredump.last_activity +
@@ -743,12 +743,12 @@ void mt7902_coredump_work(struct work_struct *work)
 		dev_coredumpv(dev->mt76.dev, dump, MT76_CONNAC_COREDUMP_SZ,
 			      GFP_KERNEL);
 
-	mt792x_reset(&dev->mt76);
+	mt7902_mt792x_reset(&dev->mt76);
 }
 
 /* usb_sdio */
 static void
-mt7902_usb_sdio_write_txwi(struct mt792x_dev *dev, struct mt76_wcid *wcid,
+mt7902_usb_sdio_write_txwi(struct mt7902_mt792x_dev *dev, struct mt76_wcid *wcid,
 			   enum mt76_txq_id qid, struct ieee80211_sta *sta,
 			   struct ieee80211_key_conf *key, int pid,
 			   struct sk_buff *skb)
@@ -765,7 +765,7 @@ int mt7902_usb_sdio_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 				   struct ieee80211_sta *sta,
 				   struct mt76_tx_info *tx_info)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(tx_info->skb);
 	struct ieee80211_key_conf *key = info->control.hw_key;
 	struct sk_buff *skb = tx_info->skb;
@@ -782,7 +782,7 @@ int mt7902_usb_sdio_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 		wcid = &dev->mt76.global_wcid;
 
 	if (sta) {
-		struct mt792x_sta *msta = (struct mt792x_sta *)sta->drv_priv;
+		struct mt7902_mt792x_sta *msta = (struct mt7902_mt792x_sta *)sta->drv_priv;
 
 		if (time_after(jiffies, msta->last_txs + HZ / 4)) {
 			info->flags |= IEEE80211_TX_CTL_REQ_TX_STATUS;
@@ -794,7 +794,7 @@ int mt7902_usb_sdio_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 	mt7902_usb_sdio_write_txwi(dev, wcid, qid, sta, key, pktid, skb);
 
 	type = mt76_is_sdio(mdev) ? MT7902_SDIO_DATA : 0;
-	mt792x_skb_add_usb_sdio_hdr(dev, skb, type);
+	mt7902_mt792x_skb_add_usb_sdio_hdr(dev, skb, type);
 	pad = round_up(skb->len, 4) - skb->len;
 	if (mt76_is_usb(mdev))
 		pad += 4;
@@ -831,11 +831,11 @@ EXPORT_SYMBOL_GPL(mt7902_usb_sdio_tx_complete_skb);
 
 bool mt7902_usb_sdio_tx_status_data(struct mt76_dev *mdev, u8 *update)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	mt7902_mac_sta_poll(dev);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 
 	return false;
 }
@@ -844,7 +844,7 @@ EXPORT_SYMBOL_GPL(mt7902_usb_sdio_tx_status_data);
 #if IS_ENABLED(CONFIG_IPV6)
 void mt7902_set_ipv6_ns_work(struct work_struct *work)
 {
-	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,
+	struct mt7902_mt792x_dev *dev = container_of(work, struct mt7902_mt792x_dev,
 					      ipv6_ns_work);
 	struct sk_buff *skb;
 	int ret = 0;
@@ -855,10 +855,10 @@ void mt7902_set_ipv6_ns_work(struct work_struct *work)
 		if (!skb)
 			break;
 
-		mt792x_mutex_acquire(dev);
+		mt7902_mt792x_mutex_acquire(dev);
 		ret = mt76_mcu_skb_send_msg(&dev->mt76, skb,
 					    MCU_UNI_CMD(OFFLOAD), true);
-		mt792x_mutex_release(dev);
+		mt7902_mt792x_mutex_release(dev);
 
 	} while (!ret);
 

@@ -10,7 +10,7 @@ int mt7902e_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 			   struct ieee80211_sta *sta,
 			   struct mt76_tx_info *tx_info)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(tx_info->skb);
 	struct ieee80211_key_conf *key = info->control.hw_key;
 	struct mt76_connac_hw_txp *txp;
@@ -32,7 +32,7 @@ int mt7902e_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 		return id;
 
 	if (sta) {
-		struct mt792x_sta *msta = (struct mt792x_sta *)sta->drv_priv;
+		struct mt7902_mt792x_sta *msta = (struct mt7902_mt792x_sta *)sta->drv_priv;
 
 		if (time_after(jiffies, msta->last_txs + HZ / 4)) {
 			info->flags |= IEEE80211_TX_CTL_REQ_TX_STATUS;
@@ -53,11 +53,11 @@ int mt7902e_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 	return 0;
 }
 
-int mt7902e_mac_reset(struct mt792x_dev *dev)
+int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 {
 	int i, err;
 
-	mt792xe_mcu_drv_pmctrl(dev);
+	mt7902_mt792xe_mcu_drv_pmctrl(dev);
 
 	mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
 
@@ -80,7 +80,7 @@ int mt7902e_mac_reset(struct mt792x_dev *dev)
 	mt76_connac2_tx_token_put(&dev->mt76);
 	idr_init(&dev->mt76.token);
 
-	mt792x_wpdma_reset(dev, true);
+	mt7902_mt792x_wpdma_reset(dev, true);
 
 	local_bh_disable();
 	mt76_for_each_q_rx(&dev->mt76, i) {

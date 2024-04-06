@@ -28,7 +28,7 @@ static int
 mt7902u_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 			 int cmd, int *seq)
 {
-	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
+	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	u32 pad, ep;
 	int ret;
 
@@ -43,7 +43,7 @@ mt7902u_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 	else
 		ep = MT_EP_OUT_AC_BE;
 
-	mt792x_skb_add_usb_sdio_hdr(dev, skb, 0);
+	mt7902_mt792x_skb_add_usb_sdio_hdr(dev, skb, 0);
 	pad = round_up(skb->len, 4) + 4 - skb->len;
 	__skb_put_zero(skb, pad);
 
@@ -54,7 +54,7 @@ mt7902u_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 	return ret;
 }
 
-static int mt7902u_mcu_init(struct mt792x_dev *dev)
+static int mt7902u_mcu_init(struct mt7902_mt792x_dev *dev)
 {
 	static const struct mt76_mcu_ops mcu_ops = {
 		.headroom = MT_SDIO_HDR_SIZE +
@@ -78,7 +78,7 @@ static int mt7902u_mcu_init(struct mt792x_dev *dev)
 	return 0;
 }
 
-static int mt7902u_mac_reset(struct mt792x_dev *dev)
+static int mt7902u_mac_reset(struct mt7902_mt792x_dev *dev)
 {
 	int err;
 
@@ -94,18 +94,18 @@ static int mt7902u_mac_reset(struct mt792x_dev *dev)
 	mt76u_stop_rx(&dev->mt76);
 	mt76u_stop_tx(&dev->mt76);
 
-	mt792xu_wfsys_reset(dev);
+	mt7902_mt792xu_wfsys_reset(dev);
 
 	clear_bit(MT76_MCU_RESET, &dev->mphy.state);
 	err = mt76u_resume_rx(&dev->mt76);
 	if (err)
 		goto out;
 
-	err = mt792xu_mcu_power_on(dev);
+	err = mt7902_mt792xu_mcu_power_on(dev);
 	if (err)
 		goto out;
 
-	err = mt792xu_dma_init(dev, false);
+	err = mt7902_mt792xu_dma_init(dev, false);
 	if (err)
 		goto out;
 
@@ -153,40 +153,40 @@ static int mt7902u_probe(struct usb_interface *usb_intf,
 		.sta_add = mt7902_mac_sta_add,
 		.sta_assoc = mt7902_mac_sta_assoc,
 		.sta_remove = mt7902_mac_sta_remove,
-		.update_survey = mt792x_update_channel,
+		.update_survey = mt7902_mt792x_update_channel,
 	};
-	static const struct mt792x_hif_ops hif_ops = {
+	static const struct mt7902_mt792x_hif_ops hif_ops = {
 		.mcu_init = mt7902u_mcu_init,
-		.init_reset = mt792xu_init_reset,
+		.init_reset = mt7902_mt792xu_init_reset,
 		.reset = mt7902u_mac_reset,
 	};
 	static struct mt76_bus_ops bus_ops = {
-		.rr = mt792xu_rr,
-		.wr = mt792xu_wr,
-		.rmw = mt792xu_rmw,
+		.rr = mt7902_mt792xu_rr,
+		.wr = mt7902_mt792xu_wr,
+		.rmw = mt7902_mt792xu_rmw,
 		.read_copy = mt76u_read_copy,
-		.write_copy = mt792xu_copy,
+		.write_copy = mt7902_mt792xu_copy,
 		.type = MT76_BUS_USB,
 	};
 	struct usb_device *udev = interface_to_usbdev(usb_intf);
 	struct ieee80211_ops *ops;
 	struct ieee80211_hw *hw;
-	struct mt792x_dev *dev;
+	struct mt7902_mt792x_dev *dev;
 	struct mt76_dev *mdev;
 	u8 features;
 	int ret;
 
-	ops = mt792x_get_mac80211_ops(&usb_intf->dev, &mt7902_ops,
+	ops = mt7902_mt792x_get_mac80211_ops(&usb_intf->dev, &mt7902_ops,
 				      (void *)id->driver_info, &features);
 	if (!ops)
 		return -ENOMEM;
 
-	ops->stop = mt792xu_stop;
+	ops->stop = mt7902_mt792xu_stop;
 	mdev = mt76_alloc_device(&usb_intf->dev, sizeof(*dev), ops, &drv_ops);
 	if (!mdev)
 		return -ENOMEM;
 
-	dev = container_of(mdev, struct mt792x_dev, mt76);
+	dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	dev->fw_features = features;
 	dev->hif_ops = &hif_ops;
 
@@ -204,12 +204,12 @@ static int mt7902u_probe(struct usb_interface *usb_intf,
 	dev_dbg(mdev->dev, "ASIC revision: %04x\n", mdev->rev);
 
 	if (mt76_get_field(dev, MT_CONN_ON_MISC, MT_TOP_MISC2_FW_N9_RDY)) {
-		ret = mt792xu_wfsys_reset(dev);
+		ret = mt7902_mt792xu_wfsys_reset(dev);
 		if (ret)
 			goto error;
 	}
 
-	ret = mt792xu_mcu_power_on(dev);
+	ret = mt7902_mt792xu_mcu_power_on(dev);
 	if (ret)
 		goto error;
 
@@ -221,7 +221,7 @@ static int mt7902u_probe(struct usb_interface *usb_intf,
 	if (ret)
 		goto error;
 
-	ret = mt792xu_dma_init(dev, false);
+	ret = mt7902_mt792xu_dma_init(dev, false);
 	if (ret)
 		goto error;
 
@@ -249,7 +249,7 @@ error:
 #ifdef CONFIG_PM
 static int mt7902u_suspend(struct usb_interface *intf, pm_message_t state)
 {
-	struct mt792x_dev *dev = usb_get_intfdata(intf);
+	struct mt7902_mt792x_dev *dev = usb_get_intfdata(intf);
 	struct mt76_connac_pm *pm = &dev->pm;
 	int err;
 
@@ -269,14 +269,14 @@ failed:
 	pm->suspended = false;
 
 	if (err < 0)
-		mt792x_reset(&dev->mt76);
+		mt7902_mt792x_reset(&dev->mt76);
 
 	return err;
 }
 
 static int mt7902u_resume(struct usb_interface *intf)
 {
-	struct mt792x_dev *dev = usb_get_intfdata(intf);
+	struct mt7902_mt792x_dev *dev = usb_get_intfdata(intf);
 	struct mt76_connac_pm *pm = &dev->pm;
 	bool reinit = true;
 	int err, i;
@@ -296,8 +296,8 @@ static int mt7902u_resume(struct usb_interface *intf)
 		msleep(20);
 	}
 
-	if (reinit || mt792x_dma_need_reinit(dev)) {
-		err = mt792xu_dma_init(dev, true);
+	if (reinit || mt7902_mt792x_dma_need_reinit(dev)) {
+		err = mt7902_mt792xu_dma_init(dev, true);
 		if (err)
 			goto failed;
 	}
@@ -311,7 +311,7 @@ failed:
 	pm->suspended = false;
 
 	if (err < 0)
-		mt792x_reset(&dev->mt76);
+		mt7902_mt792x_reset(&dev->mt76);
 
 	return err;
 }
@@ -325,7 +325,7 @@ static struct usb_driver mt7902u_driver = {
 	.name		= KBUILD_MODNAME,
 	.id_table	= mt7902u_device_table,
 	.probe		= mt7902u_probe,
-	.disconnect	= mt792xu_disconnect,
+	.disconnect	= mt7902_mt792xu_disconnect,
 #ifdef CONFIG_PM
 	.suspend	= mt7902u_suspend,
 	.resume		= mt7902u_resume,
