@@ -12,14 +12,14 @@ static u32 mt7902_mt76_mmio_rr(struct mt7902_mt76_dev *dev, u32 offset)
 	u32 val;
 
 	val = readl(dev->mmio.regs + offset);
-	trace_reg_rr(dev, offset, val);
+	// trace_reg_rr(dev, offset, val);
 
 	return val;
 }
 
 static void mt7902_mt76_mmio_wr(struct mt7902_mt76_dev *dev, u32 offset, u32 val)
 {
-	trace_reg_wr(dev, offset, val);
+	// trace_reg_wr(dev, offset, val);
 	writel(val, dev->mmio.regs + offset);
 }
 
