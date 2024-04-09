@@ -10,7 +10,7 @@ KDIR = /lib/modules/$(KVER)/build
 PWD := $(shell pwd)
 VERSION="0.0.1"
 
-mt7902-common-objs = mac.o mcu.o main.o init.o debugfs.o
+mt7902-common-objs = mac.o mcu.o main.o init.o debugfs.o ../mt792x_debugfs.o ../mt792x_core.o ../mt792x_mac.o ../mt792x_acpi_sar.o ../mt792x_dma.o
 mt7902-objs = pci.o pci_mac.o pci_mcu.o
 
 default: modules
