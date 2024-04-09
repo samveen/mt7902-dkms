@@ -55,10 +55,10 @@ void mt7902_mt792x_tx(struct ieee80211_hw *hw, struct ieee80211_tx_control *cont
 	       struct sk_buff *skb)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_vif *vif = info->control.vif;
-	struct mt76_wcid *wcid = &dev->mt76.global_wcid;
+	struct mt7902_mt76_wcid *wcid = &dev->mt76.global_wcid;
 	int qid;
 
 	if (control->sta) {
@@ -75,9 +75,9 @@ void mt7902_mt792x_tx(struct ieee80211_hw *hw, struct ieee80211_tx_control *cont
 		wcid = &mvif->sta.wcid;
 	}
 
-	if (mt76_connac_pm_ref(mphy, &dev->pm)) {
-		mt76_tx(mphy, control->sta, wcid, skb);
-		mt76_connac_pm_unref(mphy, &dev->pm);
+	if (mt7902_mt76_connac_pm_ref(mphy, &dev->pm)) {
+		mt7902_mt76_tx(mphy, control->sta, wcid, skb);
+		mt7902_mt76_connac_pm_unref(mphy, &dev->pm);
 		return;
 	}
 
@@ -87,7 +87,7 @@ void mt7902_mt792x_tx(struct ieee80211_hw *hw, struct ieee80211_tx_control *cont
 		skb_set_queue_mapping(skb, qid);
 	}
 
-	mt76_connac_pm_queue_skb(hw, &dev->pm, wcid, skb);
+	mt7902_mt76_connac_pm_queue_skb(hw, &dev->pm, wcid, skb);
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_tx);
 
@@ -101,11 +101,11 @@ void mt7902_mt792x_stop(struct ieee80211_hw *hw)
 	cancel_delayed_work_sync(&dev->pm.ps_work);
 	cancel_work_sync(&dev->pm.wake_work);
 	cancel_work_sync(&dev->reset_work);
-	mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
+	mt7902_mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
 
 	if (is_mt7921(&dev->mt76)) {
 		mt7902_mt792x_mutex_acquire(dev);
-		mt76_connac_mcu_set_mac_enable(&dev->mt76, 0, false, false);
+		mt7902_mt76_connac_mcu_set_mac_enable(&dev->mt76, 0, false, false);
 		mt7902_mt792x_mutex_release(dev);
 	}
 
@@ -123,8 +123,8 @@ void mt7902_mt792x_remove_interface(struct ieee80211_hw *hw,
 	int idx = msta->wcid.idx;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt76_connac_free_pending_tx_skbs(&dev->pm, &msta->wcid);
-	mt76_connac_mcu_uni_add_dev(&dev->mphy, vif, &mvif->sta.wcid, false);
+	mt7902_mt76_connac_free_pending_tx_skbs(&dev->pm, &msta->wcid);
+	mt7902_mt76_connac_mcu_uni_add_dev(&dev->mphy, vif, &mvif->sta.wcid, false);
 
 	rcu_assign_pointer(dev->mt76.wcid[idx], NULL);
 
@@ -137,7 +137,7 @@ void mt7902_mt792x_remove_interface(struct ieee80211_hw *hw,
 		list_del_init(&msta->wcid.poll_list);
 	spin_unlock_bh(&dev->mt76.sta_poll_lock);
 
-	mt76_wcid_cleanup(&dev->mt76, &msta->wcid);
+	mt7902_mt76_wcid_cleanup(&dev->mt76, &msta->wcid);
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_remove_interface);
 
@@ -148,7 +148,7 @@ int mt7902_mt792x_conf_tx(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
 
 	/* no need to update right away, we'll get BSS_CHANGED_QOS */
-	queue = mt76_connac_lmac_mapping(queue);
+	queue = mt7902_mt76_connac_lmac_mapping(queue);
 	mvif->queue_params[queue] = *params;
 
 	return 0;
@@ -159,7 +159,7 @@ int mt7902_mt792x_get_stats(struct ieee80211_hw *hw,
 		     struct ieee80211_low_level_stats *stats)
 {
 	struct mt7902_mt792x_phy *phy = mt7902_mt792x_hw_phy(hw);
-	struct mt76_mib_stats *mib = &phy->mib;
+	struct mt7902_mt76_mib_stats *mib = &phy->mib;
 
 	mt7902_mt792x_mutex_acquire(phy->dev);
 
@@ -189,9 +189,9 @@ u64 mt7902_mt792x_get_tsf(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 
 	n = omac_idx > HW_BSSID_MAX ? HW_BSSID_0 : omac_idx;
 	/* TSF software read */
-	mt76_set(dev, MT_LPON_TCR(0, n), MT_LPON_TCR_SW_MODE);
-	tsf.t32[0] = mt76_rr(dev, MT_LPON_UTTR0(0));
-	tsf.t32[1] = mt76_rr(dev, MT_LPON_UTTR1(0));
+	mt7902_mt76_set(dev, MT_LPON_TCR(0, n), MT_LPON_TCR_SW_MODE);
+	tsf.t32[0] = mt7902_mt76_rr(dev, MT_LPON_UTTR0(0));
+	tsf.t32[1] = mt7902_mt76_rr(dev, MT_LPON_UTTR1(0));
 
 	mt7902_mt792x_mutex_release(dev);
 
@@ -214,27 +214,27 @@ void mt7902_mt792x_set_tsf(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	mt7902_mt792x_mutex_acquire(dev);
 
 	n = omac_idx > HW_BSSID_MAX ? HW_BSSID_0 : omac_idx;
-	mt76_wr(dev, MT_LPON_UTTR0(0), tsf.t32[0]);
-	mt76_wr(dev, MT_LPON_UTTR1(0), tsf.t32[1]);
+	mt7902_mt76_wr(dev, MT_LPON_UTTR0(0), tsf.t32[0]);
+	mt7902_mt76_wr(dev, MT_LPON_UTTR1(0), tsf.t32[1]);
 	/* TSF software overwrite */
-	mt76_set(dev, MT_LPON_TCR(0, n), MT_LPON_TCR_SW_WRITE);
+	mt7902_mt76_set(dev, MT_LPON_TCR(0, n), MT_LPON_TCR_SW_WRITE);
 
 	mt7902_mt792x_mutex_release(dev);
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_set_tsf);
 
-void mt7902_mt792x_tx_worker(struct mt76_worker *w)
+void mt7902_mt792x_tx_worker(struct mt7902_mt76_worker *w)
 {
 	struct mt7902_mt792x_dev *dev = container_of(w, struct mt7902_mt792x_dev,
 					      mt76.tx_worker);
 
-	if (!mt76_connac_pm_ref(&dev->mphy, &dev->pm)) {
+	if (!mt7902_mt76_connac_pm_ref(&dev->mphy, &dev->pm)) {
 		queue_work(dev->mt76.wq, &dev->pm.wake_work);
 		return;
 	}
 
-	mt76_txq_schedule_all(&dev->mphy);
-	mt76_connac_pm_unref(&dev->mphy, &dev->pm);
+	mt7902_mt76_txq_schedule_all(&dev->mphy);
+	mt7902_mt76_connac_pm_unref(&dev->mphy, &dev->pm);
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_tx_worker);
 
@@ -252,7 +252,7 @@ void mt7902_mt792x_flush(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
 
 	wait_event_timeout(dev->mt76.tx_wait,
-			   !mt76_has_tx_pending(&dev->mphy), HZ / 2);
+			   !mt7902_mt76_has_tx_pending(&dev->mphy), HZ / 2);
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_flush);
 
@@ -289,7 +289,7 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_unassign_vif_chanctx);
 void mt7902_mt792x_set_wakeup(struct ieee80211_hw *hw, bool enabled)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 
 	device_set_wakeup_enable(mdev->dev, enabled);
 }
@@ -403,12 +403,12 @@ static void
 mt7902_mt792x_ethtool_worker(void *wi_data, struct ieee80211_sta *sta)
 {
 	struct mt7902_mt792x_sta *msta = (struct mt7902_mt792x_sta *)sta->drv_priv;
-	struct mt76_ethtool_worker_info *wi = wi_data;
+	struct mt7902_mt76_ethtool_worker_info *wi = wi_data;
 
 	if (msta->vif->mt76.idx != wi->idx)
 		return;
 
-	mt76_ethtool_worker(wi, &msta->wcid.stats, true);
+	mt7902_mt76_ethtool_worker(wi, &msta->wcid.stats, true);
 }
 
 void mt7902_mt792x_get_et_stats(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
@@ -418,8 +418,8 @@ void mt7902_mt792x_get_et_stats(struct ieee80211_hw *hw, struct ieee80211_vif *v
 	int stats_size = ARRAY_SIZE(mt7902_mt792x_gstrings_stats);
 	struct mt7902_mt792x_phy *phy = mt7902_mt792x_hw_phy(hw);
 	struct mt7902_mt792x_dev *dev = phy->dev;
-	struct mt76_mib_stats *mib = &phy->mib;
-	struct mt76_ethtool_worker_info wi = {
+	struct mt7902_mt76_mib_stats *mib = &phy->mib;
+	struct mt7902_mt76_ethtool_worker_info wi = {
 		.data = data,
 		.idx = mvif->mt76.idx,
 	};
@@ -472,7 +472,7 @@ void mt7902_mt792x_get_et_stats(struct ieee80211_hw *hw, struct ieee80211_vif *v
 
 	ei += wi.worker_stat_count;
 
-	mt76_ethtool_page_pool_stats(&dev->mt76, &data[ei], &ei);
+	mt7902_mt76_ethtool_page_pool_stats(&dev->mt76, &data[ei], &ei);
 	stats_size += page_pool_ethtool_stats_get_count();
 
 	if (ei != stats_size)
@@ -616,7 +616,7 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_init_wiphy);
 static u8
 mt7902_mt792x_get_offload_capability(struct device *dev, const char *fw_wm)
 {
-	const struct mt76_connac2_fw_trailer *hdr;
+	const struct mt7902_mt76_connac2_fw_trailer *hdr;
 	struct mt7902_mt792x_realease_info *rel_info;
 	const struct firmware *fw;
 	int ret, i, offset = 0;
@@ -636,7 +636,7 @@ mt7902_mt792x_get_offload_capability(struct device *dev, const char *fw_wm)
 	hdr = (const void *)(fw->data + fw->size - sizeof(*hdr));
 
 	for (i = 0; i < hdr->n_region; i++) {
-		const struct mt76_connac2_fw_region *region;
+		const struct mt7902_mt76_connac2_fw_region *region;
 
 		region = (const void *)((const u8 *)hdr -
 					(hdr->n_region - i) * sizeof(*region));
@@ -703,7 +703,7 @@ int mt7902_mt792x_init_wcid(struct mt7902_mt792x_dev *dev)
 	int idx;
 
 	/* Beacon and mgmt frames should occupy wcid 0 */
-	idx = mt76_wcid_alloc(dev->mt76.wcid_mask, MT792x_WTBL_STA - 1);
+	idx = mt7902_mt76_wcid_alloc(dev->mt76.wcid_mask, MT792x_WTBL_STA - 1);
 	if (idx)
 		return -ENOSPC;
 
@@ -718,8 +718,8 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_init_wcid);
 
 int mt7902_mt792x_mcu_drv_pmctrl(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	int err = 0;
 
 	mutex_lock(&pm->mutex);
@@ -740,13 +740,13 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_mcu_drv_pmctrl);
 
 int mt7902_mt792x_mcu_fw_pmctrl(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	int err = 0;
 
 	mutex_lock(&pm->mutex);
 
-	if (mt76_connac_skip_fw_pmctrl(mphy, pm))
+	if (mt7902_mt76_connac_skip_fw_pmctrl(mphy, pm))
 		goto out;
 
 	err = __mt7902_mt792x_mcu_fw_pmctrl(dev);
@@ -765,8 +765,8 @@ int __mt7902_mt792xe_mcu_drv_pmctrl(struct mt7902_mt792x_dev *dev)
 	int i, err = 0;
 
 	for (i = 0; i < MT792x_DRV_OWN_RETRY_COUNT; i++) {
-		mt76_wr(dev, MT_CONN_ON_LPCTL, PCIE_LPCR_HOST_CLR_OWN);
-		if (mt76_poll_msec_tick(dev, MT_CONN_ON_LPCTL,
+		mt7902_mt76_wr(dev, MT_CONN_ON_LPCTL, PCIE_LPCR_HOST_CLR_OWN);
+		if (mt7902_mt76_poll_msec_tick(dev, MT_CONN_ON_LPCTL,
 					PCIE_LPCR_HOST_OWN_SYNC, 0, 50, 1))
 			break;
 	}
@@ -782,8 +782,8 @@ EXPORT_SYMBOL_GPL(__mt7902_mt792xe_mcu_drv_pmctrl);
 
 int mt7902_mt792xe_mcu_drv_pmctrl(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	int err;
 
 	err = __mt7902_mt792xe_mcu_drv_pmctrl(dev);
@@ -803,13 +803,13 @@ EXPORT_SYMBOL_GPL(mt7902_mt792xe_mcu_drv_pmctrl);
 
 int mt7902_mt792xe_mcu_fw_pmctrl(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	int i;
 
 	for (i = 0; i < MT792x_DRV_OWN_RETRY_COUNT; i++) {
-		mt76_wr(dev, MT_CONN_ON_LPCTL, PCIE_LPCR_HOST_SET_OWN);
-		if (mt76_poll_msec_tick(dev, MT_CONN_ON_LPCTL,
+		mt7902_mt76_wr(dev, MT_CONN_ON_LPCTL, PCIE_LPCR_HOST_SET_OWN);
+		if (mt7902_mt76_poll_msec_tick(dev, MT_CONN_ON_LPCTL,
 					PCIE_LPCR_HOST_OWN_SYNC, 4, 50, 1))
 			break;
 	}
@@ -832,22 +832,22 @@ int mt7902_mt792x_load_firmware(struct mt7902_mt792x_dev *dev)
 {
 	int ret;
 
-	ret = mt76_connac2_load_patch(&dev->mt76, mt7902_mt792x_patch_name(dev));
+	ret = mt7902_mt76_connac2_load_patch(&dev->mt76, mt7902_mt792x_patch_name(dev));
 	if (ret)
 		return ret;
 
-	if (mt76_is_sdio(&dev->mt76)) {
+	if (mt7902_mt76_is_sdio(&dev->mt76)) {
 		/* activate again */
 		ret = __mt7902_mt792x_mcu_fw_pmctrl(dev);
 		if (!ret)
 			ret = __mt7902_mt792x_mcu_drv_pmctrl(dev);
 	}
 
-	ret = mt76_connac2_load_ram(&dev->mt76, mt7902_mt792x_ram_name(dev), NULL);
+	ret = mt7902_mt76_connac2_load_ram(&dev->mt76, mt7902_mt792x_ram_name(dev), NULL);
 	if (ret)
 		return ret;
 
-	if (!mt76_poll_msec(dev, MT_CONN_ON_MISC, MT_TOP_MISC2_FW_N9_RDY,
+	if (!mt7902_mt76_poll_msec(dev, MT_CONN_ON_MISC, MT_TOP_MISC2_FW_N9_RDY,
 			    MT_TOP_MISC2_FW_N9_RDY, 1500)) {
 		dev_err(dev->mt76.dev, "Timeout for initializing firmware\n");
 
@@ -855,7 +855,7 @@ int mt7902_mt792x_load_firmware(struct mt7902_mt792x_dev *dev)
 	}
 
 #ifdef CONFIG_PM
-	dev->mt76.hw->wiphy->wowlan = &mt76_connac_wowlan_support;
+	dev->mt76.hw->wiphy->wowlan = &mt7902_mt76_connac_wowlan_support;
 #endif /* CONFIG_PM */
 
 	dev_dbg(dev->mt76.dev, "Firmware init done\n");

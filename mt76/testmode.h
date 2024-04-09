@@ -10,12 +10,12 @@
 #include <net/netlink.h>
 
 /**
- * enum mt76_testmode_attr - testmode attributes inside NL80211_ATTR_TESTDATA
+ * enum mt7902_mt76_testmode_attr - testmode attributes inside NL80211_ATTR_TESTDATA
  *
  * @MT76_TM_ATTR_UNSPEC: (invalid attribute)
  *
  * @MT76_TM_ATTR_RESET: reset parameters to default (flag)
- * @MT76_TM_ATTR_STATE: test state (u32), see &enum mt76_testmode_state
+ * @MT76_TM_ATTR_STATE: test state (u32), see &enum mt7902_mt76_testmode_state
  *
  * @MT76_TM_ATTR_MTD_PART: mtd partition used for eeprom data (string)
  * @MT76_TM_ATTR_MTD_OFFSET: offset of eeprom data within the partition (u32)
@@ -24,7 +24,7 @@
  *	state to MT76_TM_STATE_TX_FRAMES (u32)
  * @MT76_TM_ATTR_TX_PENDING: pending frames during MT76_TM_STATE_TX_FRAMES (u32)
  * @MT76_TM_ATTR_TX_LENGTH: packet tx mpdu length (u32)
- * @MT76_TM_ATTR_TX_RATE_MODE: packet tx mode (u8, see &enum mt76_testmode_tx_mode)
+ * @MT76_TM_ATTR_TX_RATE_MODE: packet tx mode (u8, see &enum mt7902_mt76_testmode_tx_mode)
  * @MT76_TM_ATTR_TX_RATE_NSS: packet tx number of spatial streams (u8)
  * @MT76_TM_ATTR_TX_RATE_IDX: packet tx rate/MCS index (u8)
  * @MT76_TM_ATTR_TX_RATE_SGI: packet tx use short guard interval (u8)
@@ -38,7 +38,7 @@
  *
  * @MT76_TM_ATTR_FREQ_OFFSET: RF frequency offset (u32)
  *
- * @MT76_TM_ATTR_STATS: statistics (nested, see &enum mt76_testmode_stats_attr)
+ * @MT76_TM_ATTR_STATS: statistics (nested, see &enum mt7902_mt76_testmode_stats_attr)
  *
  * @MT76_TM_ATTR_TX_SPE_IDX: tx spatial extension index (u8)
  *
@@ -50,7 +50,7 @@
  *
  * @MT76_TM_ATTR_MAC_ADDRS: array of nested MAC addresses (nested)
  */
-enum mt76_testmode_attr {
+enum mt7902_mt76_testmode_attr {
 	MT76_TM_ATTR_UNSPEC,
 
 	MT76_TM_ATTR_RESET,
@@ -93,7 +93,7 @@ enum mt76_testmode_attr {
 };
 
 /**
- * enum mt76_testmode_state - statistics attributes
+ * enum mt7902_mt76_testmode_state - statistics attributes
  *
  * @MT76_TM_STATS_ATTR_TX_PENDING: pending tx frames (u32)
  * @MT76_TM_STATS_ATTR_TX_QUEUED: queued tx frames (u32)
@@ -102,9 +102,9 @@ enum mt76_testmode_attr {
  * @MT76_TM_STATS_ATTR_RX_PACKETS: number of rx packets (u64)
  * @MT76_TM_STATS_ATTR_RX_FCS_ERROR: number of rx packets with FCS error (u64)
  * @MT76_TM_STATS_ATTR_LAST_RX: information about the last received packet
- *	see &enum mt76_testmode_rx_attr
+ *	see &enum mt7902_mt76_testmode_rx_attr
  */
-enum mt76_testmode_stats_attr {
+enum mt7902_mt76_testmode_stats_attr {
 	MT76_TM_STATS_ATTR_UNSPEC,
 	MT76_TM_STATS_ATTR_PAD,
 
@@ -123,7 +123,7 @@ enum mt76_testmode_stats_attr {
 
 
 /**
- * enum mt76_testmode_rx_attr - packet rx information
+ * enum mt7902_mt76_testmode_rx_attr - packet rx information
  *
  * @MT76_TM_RX_ATTR_FREQ_OFFSET: frequency offset (s32)
  * @MT76_TM_RX_ATTR_RCPI: received channel power indicator (array, u8)
@@ -131,7 +131,7 @@ enum mt76_testmode_stats_attr {
  * @MT76_TM_RX_ATTR_WB_RSSI: internal wideband RSSI (array, s8)
  * @MT76_TM_RX_ATTR_SNR: signal-to-noise ratio (u8)
  */
-enum mt76_testmode_rx_attr {
+enum mt7902_mt76_testmode_rx_attr {
 	MT76_TM_RX_ATTR_UNSPEC,
 
 	MT76_TM_RX_ATTR_FREQ_OFFSET,
@@ -146,7 +146,7 @@ enum mt76_testmode_rx_attr {
 };
 
 /**
- * enum mt76_testmode_state - phy test state
+ * enum mt7902_mt76_testmode_state - phy test state
  *
  * @MT76_TM_STATE_OFF: test mode disabled (normal operation)
  * @MT76_TM_STATE_IDLE: test mode enabled, but idle
@@ -155,7 +155,7 @@ enum mt76_testmode_rx_attr {
  * @MT76_TM_STATE_TX_CONT: waveform tx without time gap
  * @MT76_TM_STATE_ON: test mode enabled used in offload firmware
  */
-enum mt76_testmode_state {
+enum mt7902_mt76_testmode_state {
 	MT76_TM_STATE_OFF,
 	MT76_TM_STATE_IDLE,
 	MT76_TM_STATE_TX_FRAMES,
@@ -169,7 +169,7 @@ enum mt76_testmode_state {
 };
 
 /**
- * enum mt76_testmode_tx_mode - packet tx phy mode
+ * enum mt7902_mt76_testmode_tx_mode - packet tx phy mode
  *
  * @MT76_TM_TX_MODE_CCK: legacy CCK mode
  * @MT76_TM_TX_MODE_OFDM: legacy OFDM mode
@@ -180,7 +180,7 @@ enum mt76_testmode_state {
  * @MT76_TM_TX_MODE_HE_TB: 802.11ax trigger-based
  * @MT76_TM_TX_MODE_HE_MU: 802.11ax multi-user MIMO
  */
-enum mt76_testmode_tx_mode {
+enum mt7902_mt76_testmode_tx_mode {
 	MT76_TM_TX_MODE_CCK,
 	MT76_TM_TX_MODE_OFDM,
 	MT76_TM_TX_MODE_HT,
@@ -195,6 +195,6 @@ enum mt76_testmode_tx_mode {
 	MT76_TM_TX_MODE_MAX = NUM_MT76_TM_TX_MODES - 1,
 };
 
-extern const struct nla_policy mt76_tm_policy[NUM_MT76_TM_ATTRS];
+extern const struct nla_policy mt7902_mt76_tm_policy[NUM_MT76_TM_ATTRS];
 
 #endif

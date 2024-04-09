@@ -9,7 +9,7 @@ mt7902_reg_set(void *data, u64 val)
 	struct mt7902_mt792x_dev *dev = data;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt76_wr(dev, dev->mt76.debugfs_reg, val);
+	mt7902_mt76_wr(dev, dev->mt76.debugfs_reg, val);
 	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
@@ -21,7 +21,7 @@ mt7902_reg_get(void *data, u64 *val)
 	struct mt7902_mt792x_dev *dev = data;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	*val = mt76_rr(dev, dev->mt76.debugfs_reg);
+	*val = mt7902_mt76_rr(dev, dev->mt76.debugfs_reg);
 	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
@@ -143,9 +143,9 @@ static int
 mt7902_pm_set(void *data, u64 val)
 {
 	struct mt7902_mt792x_dev *dev = data;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 
-	if (mt76_is_usb(&dev->mt76))
+	if (mt7902_mt76_is_usb(&dev->mt76))
 		return -EOPNOTSUPP;
 
 	mutex_lock(&dev->mt76.mutex);
@@ -161,11 +161,11 @@ mt7902_pm_set(void *data, u64 val)
 	 * just at end of the this routine.
 	 */
 	pm->enable = false;
-	mt76_connac_pm_wake(&dev->mphy, pm);
+	mt7902_mt76_connac_pm_wake(&dev->mphy, pm);
 
 	pm->enable_user = val;
 	mt7902_set_runtime_pm(dev);
-	mt76_connac_power_save_sched(&dev->mphy, pm);
+	mt7902_mt76_connac_power_save_sched(&dev->mphy, pm);
 out:
 	mutex_unlock(&dev->mt76.mutex);
 
@@ -188,11 +188,11 @@ static int
 mt7902_deep_sleep_set(void *data, u64 val)
 {
 	struct mt7902_mt792x_dev *dev = data;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	bool monitor = !!(dev->mphy.hw->conf.flags & IEEE80211_CONF_MONITOR);
 	bool enable = !!val;
 
-	if (mt76_is_usb(&dev->mt76))
+	if (mt7902_mt76_is_usb(&dev->mt76))
 		return -EOPNOTSUPP;
 
 	mt7902_mt792x_mutex_acquire(dev);
@@ -201,7 +201,7 @@ mt7902_deep_sleep_set(void *data, u64 val)
 
 	pm->ds_enable_user = enable;
 	pm->ds_enable = enable && !monitor;
-	mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
+	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
 out:
 	mt7902_mt792x_mutex_release(dev);
 
@@ -237,7 +237,7 @@ static int mt7902_chip_reset(void *data, u64 val)
 	default:
 		/* Collect the core dump before reset wifisys. */
 		mt7902_mt792x_mutex_acquire(dev);
-		ret = mt76_connac_mcu_chip_config(&dev->mt76);
+		ret = mt7902_mt76_connac_mcu_chip_config(&dev->mt76);
 		mt7902_mt792x_mutex_release(dev);
 		break;
 	}
@@ -251,7 +251,7 @@ static int
 mt7902s_sched_quota_read(struct seq_file *s, void *data)
 {
 	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
-	struct mt76_sdio *sdio = &dev->mt76.sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
 
 	seq_printf(s, "pse_data_quota\t%d\n", sdio->sched.pse_data_quota);
 	seq_printf(s, "ple_data_quota\t%d\n", sdio->sched.ple_data_quota);
@@ -265,16 +265,16 @@ int mt7902_init_debugfs(struct mt7902_mt792x_dev *dev)
 {
 	struct dentry *dir;
 
-	dir = mt76_register_debugfs_fops(&dev->mphy, &fops_regval);
+	dir = mt7902_mt76_register_debugfs_fops(&dev->mphy, &fops_regval);
 	if (!dir)
 		return -ENOMEM;
 
-	if (mt76_is_mmio(&dev->mt76))
+	if (mt7902_mt76_is_mmio(&dev->mt76))
 		debugfs_create_devm_seqfile(dev->mt76.dev, "xmit-queues",
 					    dir, mt7902_mt792x_queues_read);
 	else
 		debugfs_create_devm_seqfile(dev->mt76.dev, "xmit-queues",
-					    dir, mt76_queues_read);
+					    dir, mt7902_mt76_queues_read);
 
 	debugfs_create_devm_seqfile(dev->mt76.dev, "acq", dir,
 				    mt7902_mt792x_queues_acq);
@@ -289,7 +289,7 @@ int mt7902_init_debugfs(struct mt7902_mt792x_dev *dev)
 	debugfs_create_devm_seqfile(dev->mt76.dev, "runtime_pm_stats", dir,
 				    mt7902_mt792x_pm_stats);
 	debugfs_create_file("deep-sleep", 0600, dir, dev, &fops_ds);
-	if (mt76_is_sdio(&dev->mt76))
+	if (mt7902_mt76_is_sdio(&dev->mt76))
 		debugfs_create_devm_seqfile(dev->mt76.dev, "sched-quota", dir,
 					    mt7902s_sched_quota_read);
 	return 0;

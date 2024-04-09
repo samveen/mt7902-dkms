@@ -17,7 +17,7 @@ mt7902_mt792x_ampdu_stat_read_phy(struct mt7902_mt792x_phy *phy,
 
 	/* Tx ampdu stat */
 	for (i = 0; i < ARRAY_SIZE(range); i++)
-		range[i] = mt76_rr(dev, MT_MIB_ARNG(0, i));
+		range[i] = mt7902_mt76_rr(dev, MT_MIB_ARNG(0, i));
 
 	for (i = 0; i < ARRAY_SIZE(bound); i++)
 		bound[i] = MT_MIB_ARNCR_RANGE(range[i / 4], i % 4) + 1;
@@ -40,7 +40,7 @@ int mt7902_mt792x_tx_stats_show(struct seq_file *file, void *data)
 {
 	struct mt7902_mt792x_dev *dev = file->private;
 	struct mt7902_mt792x_phy *phy = &dev->phy;
-	struct mt76_mib_stats *mib = &phy->mib;
+	struct mt7902_mt76_mib_stats *mib = &phy->mib;
 	int i;
 
 	mt7902_mt792x_mutex_acquire(dev);
@@ -75,15 +75,15 @@ int mt7902_mt792x_queues_acq(struct seq_file *s, void *data)
 		u32 ctrl, val, qlen = 0;
 		int j;
 
-		val = mt76_rr(dev, MT_PLE_AC_QEMPTY(i));
+		val = mt7902_mt76_rr(dev, MT_PLE_AC_QEMPTY(i));
 		ctrl = BIT(31) | BIT(11) | (i << 24);
 
 		for (j = 0; j < 32; j++) {
 			if (val & BIT(j))
 				continue;
 
-			mt76_wr(dev, MT_PLE_FL_Q0_CTRL, ctrl | j);
-			qlen += mt76_get_field(dev, MT_PLE_FL_Q3_CTRL,
+			mt7902_mt76_wr(dev, MT_PLE_FL_Q0_CTRL, ctrl | j);
+			qlen += mt7902_mt76_get_field(dev, MT_PLE_FL_Q3_CTRL,
 					       GENMASK(11, 0));
 		}
 		seq_printf(s, "AC%d: queued=%d\n", i, qlen);
@@ -99,7 +99,7 @@ int mt7902_mt792x_queues_read(struct seq_file *s, void *data)
 {
 	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
 	struct {
-		struct mt76_queue *q;
+		struct mt7902_mt76_queue *q;
 		char *queue;
 	} queue_map[] = {
 		{ dev->mphy.q_tx[MT_TXQ_BE],	 "WFDMA0" },
@@ -109,7 +109,7 @@ int mt7902_mt792x_queues_read(struct seq_file *s, void *data)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(queue_map); i++) {
-		struct mt76_queue *q = queue_map[i].q;
+		struct mt7902_mt76_queue *q = queue_map[i].q;
 
 		if (!q)
 			continue;
@@ -127,7 +127,7 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_queues_read);
 int mt7902_mt792x_pm_stats(struct seq_file *s, void *data)
 {
 	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 
 	unsigned long awake_time = pm->stats.awake_time;
 	unsigned long doze_time = pm->stats.doze_time;

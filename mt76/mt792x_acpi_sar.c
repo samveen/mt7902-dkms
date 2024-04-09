@@ -8,7 +8,7 @@ static int
 mt7902_mt792x_acpi_read(struct mt7902_mt792x_dev *dev, u8 *method, u8 **tbl, u32 *len)
 {
 	struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	union acpi_object *sar_root;
 	acpi_handle root, handle;
 	acpi_status status;
@@ -300,7 +300,7 @@ int mt7902_mt792x_init_acpi_sar_power(struct mt7902_mt792x_phy *phy, bool set_de
 	 * 2. w/  .sar_specs : set power with min(.sar_specs, ACPI_SAR)
 	 */
 	for (i = 0; i < capa->num_freq_ranges; i++) {
-		struct mt76_freq_range_power *frp = &phy->mt76->frp[i];
+		struct mt7902_mt76_freq_range_power *frp = &phy->mt76->frp[i];
 
 		frp->range = set_default ? &capa->freq_ranges[i] : frp->range;
 		if (!frp->range)

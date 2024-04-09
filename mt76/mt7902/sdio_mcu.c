@@ -13,12 +13,12 @@
 #include "regs.h"
 
 static int
-mt7902s_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
+mt7902s_mcu_send_message(struct mt7902_mt76_dev *mdev, struct sk_buff *skb,
 			 int cmd, int *seq)
 {
 	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	enum mt7902_sdio_pkt_type type = MT7902_SDIO_CMD;
-	enum mt76_mcuq_id txq = MT_MCUQ_WM;
+	enum mt7902_mt76_mcuq_id txq = MT_MCUQ_WM;
 	int ret, pad;
 
 	/* We just return in case firmware assertion to avoid blocking the
@@ -29,7 +29,7 @@ mt7902s_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 	if (dev->fw_assert)
 		return -EBUSY;
 
-	ret = mt76_connac2_mcu_fill_message(mdev, skb, cmd, seq);
+	ret = mt7902_mt76_connac2_mcu_fill_message(mdev, skb, cmd, seq);
 	if (ret)
 		return ret;
 
@@ -42,25 +42,25 @@ mt7902s_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 	pad = round_up(skb->len, 4) - skb->len;
 	__skb_put_zero(skb, pad);
 
-	ret = mt76_tx_queue_skb_raw(dev, mdev->q_mcu[txq], skb, 0);
+	ret = mt7902_mt76_tx_queue_skb_raw(dev, mdev->q_mcu[txq], skb, 0);
 	if (ret)
 		return ret;
 
-	mt76_queue_kick(dev, mdev->q_mcu[txq]);
+	mt7902_mt76_queue_kick(dev, mdev->q_mcu[txq]);
 
 	return ret;
 }
 
 static u32 mt7902s_read_rm3r(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_sdio *sdio = &dev->mt76.sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
 
 	return sdio_readl(sdio->func, MCR_D2HRM3R, NULL);
 }
 
 static u32 mt7902s_clear_rm3r_drv_own(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_sdio *sdio = &dev->mt76.sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
 	u32 val;
 
 	val = sdio_readl(sdio->func, MCR_D2HRM3R, NULL);
@@ -73,14 +73,14 @@ static u32 mt7902s_clear_rm3r_drv_own(struct mt7902_mt792x_dev *dev)
 
 int mt7902s_mcu_init(struct mt7902_mt792x_dev *dev)
 {
-	static const struct mt76_mcu_ops mt7902s_mcu_ops = {
+	static const struct mt7902_mt76_mcu_ops mt7902s_mcu_ops = {
 		.headroom = MT_SDIO_HDR_SIZE +
-			    sizeof(struct mt76_connac2_mcu_txd),
+			    sizeof(struct mt7902_mt76_connac2_mcu_txd),
 		.tailroom = MT_SDIO_TAIL_SIZE,
 		.mcu_skb_send_msg = mt7902s_mcu_send_message,
 		.mcu_parse_response = mt7902_mcu_parse_response,
-		.mcu_rr = mt76_connac_mcu_reg_rr,
-		.mcu_wr = mt76_connac_mcu_reg_wr,
+		.mcu_rr = mt7902_mt76_connac_mcu_reg_rr,
+		.mcu_wr = mt7902_mt76_connac_mcu_reg_wr,
 	};
 	int ret;
 
@@ -100,8 +100,8 @@ int mt7902s_mcu_init(struct mt7902_mt792x_dev *dev)
 int mt7902s_mcu_drv_pmctrl(struct mt7902_mt792x_dev *dev)
 {
 	struct sdio_func *func = dev->mt76.sdio.func;
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	u32 status;
 	int err;
 
@@ -136,8 +136,8 @@ int mt7902s_mcu_drv_pmctrl(struct mt7902_mt792x_dev *dev)
 int mt7902s_mcu_fw_pmctrl(struct mt7902_mt792x_dev *dev)
 {
 	struct sdio_func *func = dev->mt76.sdio.func;
-	struct mt76_phy *mphy = &dev->mt76.phy;
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *mphy = &dev->mt76.phy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	u32 status;
 	int err;
 

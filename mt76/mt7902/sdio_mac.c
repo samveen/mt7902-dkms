@@ -7,32 +7,32 @@
 #include "../mt76_connac2_mac.h"
 #include "../sdio.h"
 
-static void mt7902s_enable_irq(struct mt76_dev *dev)
+static void mt7902s_enable_irq(struct mt7902_mt76_dev *dev)
 {
-	struct mt76_sdio *sdio = &dev->sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->sdio;
 
 	sdio_claim_host(sdio->func);
 	sdio_writel(sdio->func, WHLPCR_INT_EN_SET, MCR_WHLPCR, NULL);
 	sdio_release_host(sdio->func);
 }
 
-static void mt7902s_disable_irq(struct mt76_dev *dev)
+static void mt7902s_disable_irq(struct mt7902_mt76_dev *dev)
 {
-	struct mt76_sdio *sdio = &dev->sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->sdio;
 
 	sdio_claim_host(sdio->func);
 	sdio_writel(sdio->func, WHLPCR_INT_EN_CLR, MCR_WHLPCR, NULL);
 	sdio_release_host(sdio->func);
 }
 
-static u32 mt7902s_read_whcr(struct mt76_dev *dev)
+static u32 mt7902s_read_whcr(struct mt7902_mt76_dev *dev)
 {
 	return sdio_readl(dev->sdio.func, MCR_WHCR, NULL);
 }
 
 int mt7902s_wfsys_reset(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_sdio *sdio = &dev->mt76.sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
 	u32 val, status;
 
 	mt7902s_mcu_drv_pmctrl(dev);
@@ -64,7 +64,7 @@ int mt7902s_wfsys_reset(struct mt7902_mt792x_dev *dev)
 
 	/* activate mt7902s again */
 	mt7902s_mcu_drv_pmctrl(dev);
-	mt76_clear(dev, MT_CONN_STATUS, MT_WIFI_PATCH_DL_STATE);
+	mt7902_mt76_clear(dev, MT_CONN_STATUS, MT_WIFI_PATCH_DL_STATE);
 	mt7902s_mcu_fw_pmctrl(dev);
 	mt7902s_mcu_drv_pmctrl(dev);
 
@@ -79,12 +79,12 @@ int mt7902s_init_reset(struct mt7902_mt792x_dev *dev)
 	skb_queue_purge(&dev->mt76.mcu.res_q);
 	wait_event_timeout(dev->mt76.sdio.wait,
 			   mt76s_txqs_empty(&dev->mt76), 5 * HZ);
-	mt76_worker_disable(&dev->mt76.sdio.txrx_worker);
+	mt7902_mt76_worker_disable(&dev->mt76.sdio.txrx_worker);
 
 	mt7902s_disable_irq(&dev->mt76);
 	mt7902s_wfsys_reset(dev);
 
-	mt76_worker_enable(&dev->mt76.sdio.txrx_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.sdio.txrx_worker);
 	clear_bit(MT76_MCU_RESET, &dev->mphy.state);
 	mt7902s_enable_irq(&dev->mt76);
 
@@ -95,27 +95,27 @@ int mt7902s_mac_reset(struct mt7902_mt792x_dev *dev)
 {
 	int err;
 
-	mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
-	mt76_txq_schedule_all(&dev->mphy);
-	mt76_worker_disable(&dev->mt76.tx_worker);
+	mt7902_mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
+	mt7902_mt76_txq_schedule_all(&dev->mphy);
+	mt7902_mt76_worker_disable(&dev->mt76.tx_worker);
 	set_bit(MT76_RESET, &dev->mphy.state);
 	set_bit(MT76_MCU_RESET, &dev->mphy.state);
 	wake_up(&dev->mt76.mcu.wait);
 	skb_queue_purge(&dev->mt76.mcu.res_q);
 	wait_event_timeout(dev->mt76.sdio.wait,
 			   mt76s_txqs_empty(&dev->mt76), 5 * HZ);
-	mt76_worker_disable(&dev->mt76.sdio.txrx_worker);
-	mt76_worker_disable(&dev->mt76.sdio.status_worker);
-	mt76_worker_disable(&dev->mt76.sdio.net_worker);
-	mt76_worker_disable(&dev->mt76.sdio.stat_worker);
+	mt7902_mt76_worker_disable(&dev->mt76.sdio.txrx_worker);
+	mt7902_mt76_worker_disable(&dev->mt76.sdio.status_worker);
+	mt7902_mt76_worker_disable(&dev->mt76.sdio.net_worker);
+	mt7902_mt76_worker_disable(&dev->mt76.sdio.stat_worker);
 
 	mt7902s_disable_irq(&dev->mt76);
 	mt7902s_wfsys_reset(dev);
 
-	mt76_worker_enable(&dev->mt76.sdio.txrx_worker);
-	mt76_worker_enable(&dev->mt76.sdio.status_worker);
-	mt76_worker_enable(&dev->mt76.sdio.net_worker);
-	mt76_worker_enable(&dev->mt76.sdio.stat_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.sdio.txrx_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.sdio.status_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.sdio.net_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.sdio.stat_worker);
 
 	dev->fw_assert = false;
 	clear_bit(MT76_MCU_RESET, &dev->mphy.state);
@@ -137,7 +137,7 @@ int mt7902s_mac_reset(struct mt7902_mt792x_dev *dev)
 out:
 	clear_bit(MT76_RESET, &dev->mphy.state);
 
-	mt76_worker_enable(&dev->mt76.tx_worker);
+	mt7902_mt76_worker_enable(&dev->mt76.tx_worker);
 
 	return err;
 }

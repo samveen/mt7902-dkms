@@ -147,7 +147,7 @@ mt7902_init_he_caps(struct mt7902_mt792x_phy *phy, enum nl80211_band band,
 		memset(he_cap->ppe_thres, 0, sizeof(he_cap->ppe_thres));
 		if (he_cap_elem->phy_cap_info[6] &
 		    IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
-			mt76_connac_gen_ppe_thresh(he_cap->ppe_thres, nss);
+			mt7902_mt76_connac_gen_ppe_thresh(he_cap->ppe_thres, nss);
 		} else {
 			he_cap_elem->phy_cap_info[9] |=
 				u8_encode_bits(IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_16US,
@@ -218,14 +218,14 @@ void mt7902_set_stream_he_caps(struct mt7902_mt792x_phy *phy)
 
 int __mt7902_start(struct mt7902_mt792x_phy *phy)
 {
-	struct mt76_phy *mphy = phy->mt76;
+	struct mt7902_mt76_phy *mphy = phy->mt76;
 	int err;
 
-	err = mt76_connac_mcu_set_mac_enable(mphy->dev, 0, true, false);
+	err = mt7902_mt76_connac_mcu_set_mac_enable(mphy->dev, 0, true, false);
 	if (err)
 		return err;
 
-	err = mt76_connac_mcu_set_channel_domain(mphy);
+	err = mt7902_mt76_connac_mcu_set_channel_domain(mphy);
 	if (err)
 		return err;
 
@@ -265,7 +265,7 @@ mt7902_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 	struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
 	struct mt7902_mt792x_phy *phy = mt7902_mt792x_hw_phy(hw);
-	struct mt76_txq *mtxq;
+	struct mt7902_mt76_txq *mtxq;
 	int idx, ret = 0;
 
 	mt7902_mt792x_mutex_acquire(dev);
@@ -281,7 +281,7 @@ mt7902_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 	mvif->mt76.band_idx = 0;
 	mvif->mt76.wmm_idx = mvif->mt76.idx % MT76_CONNAC_MAX_WMM_SETS;
 
-	ret = mt76_connac_mcu_uni_add_dev(&dev->mphy, vif, &mvif->sta.wcid,
+	ret = mt7902_mt76_connac_mcu_uni_add_dev(&dev->mphy, vif, &mvif->sta.wcid,
 					  true);
 	if (ret)
 		goto out;
@@ -296,7 +296,7 @@ mt7902_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 	mvif->sta.wcid.phy_idx = mvif->mt76.band_idx;
 	mvif->sta.wcid.hw_key_idx = -1;
 	mvif->sta.wcid.tx_info |= MT_WCID_TX_INFO_SET;
-	mt76_wcid_init(&mvif->sta.wcid);
+	mt7902_mt76_wcid_init(&mvif->sta.wcid);
 
 	mt7902_mac_wtbl_update(dev, idx,
 			       MT_WTBL_UPDATE_ADM_COUNT_CLEAR);
@@ -305,7 +305,7 @@ mt7902_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 
 	rcu_assign_pointer(dev->mt76.wcid[idx], &mvif->sta.wcid);
 	if (vif->txq) {
-		mtxq = (struct mt76_txq *)vif->txq->drv_priv;
+		mtxq = (struct mt7902_mt76_txq *)vif->txq->drv_priv;
 		mtxq->wcid = idx;
 	}
 
@@ -424,7 +424,7 @@ static int mt7902_set_channel(struct mt7902_mt792x_phy *phy)
 	mt7902_mt792x_mutex_acquire(dev);
 	set_bit(MT76_RESET, &phy->mt76->state);
 
-	mt76_set_channel(phy->mt76);
+	mt7902_mt76_set_channel(phy->mt76);
 
 	ret = mt7902_mcu_set_chan_info(phy, MCU_EXT_CMD(CHANNEL_SWITCH));
 	if (ret)
@@ -439,7 +439,7 @@ out:
 	clear_bit(MT76_RESET, &phy->mt76->state);
 	mt7902_mt792x_mutex_release(dev);
 
-	mt76_worker_schedule(&dev->mt76.tx_worker);
+	mt7902_mt76_worker_schedule(&dev->mt76.tx_worker);
 	ieee80211_queue_delayed_work(phy->mt76->hw, &phy->mt76->mac_work,
 				     MT792x_WATCHDOG_TIME);
 
@@ -454,7 +454,7 @@ static int mt7902_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 	struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
 	struct mt7902_mt792x_sta *msta = sta ? (struct mt7902_mt792x_sta *)sta->drv_priv :
 				  &mvif->sta;
-	struct mt76_wcid *wcid = &msta->wcid;
+	struct mt7902_mt76_wcid *wcid = &msta->wcid;
 	u8 *wcid_keyidx = &wcid->hw_key_idx;
 	int idx = key->keyidx, err = 0;
 
@@ -500,8 +500,8 @@ static int mt7902_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 		goto out;
 	}
 
-	mt76_wcid_key_setup(&dev->mt76, wcid, key);
-	err = mt76_connac_mcu_add_key(&dev->mt76, vif, &msta->bip,
+	mt7902_mt76_wcid_key_setup(&dev->mt76, wcid, key);
+	err = mt7902_mt76_connac_mcu_add_key(&dev->mt76, vif, &msta->bip,
 				      key, MCU_UNI_CMD(STA_REC_UPDATE),
 				      &msta->wcid, cmd);
 	if (err)
@@ -509,7 +509,7 @@ static int mt7902_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 
 	if (key->cipher == WLAN_CIPHER_SUITE_WEP104 ||
 	    key->cipher == WLAN_CIPHER_SUITE_WEP40)
-		err = mt76_connac_mcu_add_key(&dev->mt76, vif,
+		err = mt7902_mt76_connac_mcu_add_key(&dev->mt76, vif,
 					      &mvif->wep_sta->bip,
 					      key, MCU_UNI_CMD(STA_REC_UPDATE),
 					      &mvif->wep_sta->wcid, cmd);
@@ -523,7 +523,7 @@ static void
 mt7902_pm_interface_iter(void *priv, u8 *mac, struct ieee80211_vif *vif)
 {
 	struct mt7902_mt792x_dev *dev = priv;
-	struct ieee80211_hw *hw = mt76_hw(dev);
+	struct ieee80211_hw *hw = mt7902_mt76_hw(dev);
 	bool pm_enable = dev->pm.enable;
 	int err;
 
@@ -544,15 +544,15 @@ static void
 mt7902_sniffer_interface_iter(void *priv, u8 *mac, struct ieee80211_vif *vif)
 {
 	struct mt7902_mt792x_dev *dev = priv;
-	struct ieee80211_hw *hw = mt76_hw(dev);
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct ieee80211_hw *hw = mt7902_mt76_hw(dev);
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	bool monitor = !!(hw->conf.flags & IEEE80211_CONF_MONITOR);
 
 	mt7902_mcu_set_sniffer(dev, vif, monitor);
 	pm->enable = pm->enable_user && !monitor;
 	pm->ds_enable = pm->ds_enable_user && !monitor;
 
-	mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
+	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
 
 	if (monitor)
 		mt7902_mcu_set_beacon_filter(dev, vif, false);
@@ -560,8 +560,8 @@ mt7902_sniffer_interface_iter(void *priv, u8 *mac, struct ieee80211_vif *vif)
 
 void mt7902_set_runtime_pm(struct mt7902_mt792x_dev *dev)
 {
-	struct ieee80211_hw *hw = mt76_hw(dev);
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct ieee80211_hw *hw = mt7902_mt76_hw(dev);
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 	bool monitor = !!(hw->conf.flags & IEEE80211_CONF_MONITOR);
 
 	pm->enable = pm->enable_user && !monitor;
@@ -569,7 +569,7 @@ void mt7902_set_runtime_pm(struct mt7902_mt792x_dev *dev)
 					    IEEE80211_IFACE_ITER_RESUME_ALL,
 					    mt7902_pm_interface_iter, dev);
 	pm->ds_enable = pm->ds_enable_user && !monitor;
-	mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
+	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
 }
 
 static int mt7902_config(struct ieee80211_hw *hw, u32 changed)
@@ -675,7 +675,7 @@ static void mt7902_bss_info_changed(struct ieee80211_hw *hw,
 	if (changed & BSS_CHANGED_ARP_FILTER) {
 		struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
 
-		mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->mt76,
+		mt7902_mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->mt76,
 						  info);
 	}
 
@@ -710,7 +710,7 @@ mt7902_regd_set_6ghz_power_type(struct ieee80211_vif *vif, bool is_add)
 	struct mt7902_mt792x_dev *dev = phy->dev;
 	u32 valid_vif_num = 0;
 
-	ieee80211_iterate_active_interfaces(mt76_hw(dev),
+	ieee80211_iterate_active_interfaces(mt7902_mt76_hw(dev),
 					    IEEE80211_IFACE_ITER_RESUME_ALL,
 					    mt7902_calc_vif_num, &valid_vif_num);
 
@@ -744,7 +744,7 @@ out:
 	mt7902_mcu_set_clc(dev, dev->mt76.alpha2, dev->country_ie_env);
 }
 
-int mt7902_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+int mt7902_mac_sta_add(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 		       struct ieee80211_sta *sta)
 {
 	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
@@ -752,7 +752,7 @@ int mt7902_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 	struct mt7902_mt792x_vif *mvif = (struct mt7902_mt792x_vif *)vif->drv_priv;
 	int ret, idx;
 
-	idx = mt76_wcid_alloc(dev->mt76.wcid_mask, MT792x_WTBL_STA - 1);
+	idx = mt7902_mt76_wcid_alloc(dev->mt76.wcid_mask, MT792x_WTBL_STA - 1);
 	if (idx < 0)
 		return -ENOSPC;
 
@@ -764,7 +764,7 @@ int mt7902_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 	msta->wcid.tx_info |= MT_WCID_TX_INFO_SET;
 	msta->last_txs = jiffies;
 
-	ret = mt76_connac_pm_wake(&dev->mphy, &dev->pm);
+	ret = mt7902_mt76_connac_pm_wake(&dev->mphy, &dev->pm);
 	if (ret)
 		return ret;
 
@@ -781,13 +781,13 @@ int mt7902_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 
 	mt7902_regd_set_6ghz_power_type(vif, true);
 
-	mt76_connac_power_save_sched(&dev->mphy, &dev->pm);
+	mt7902_mt76_connac_power_save_sched(&dev->mphy, &dev->pm);
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_sta_add);
 
-void mt7902_mac_sta_assoc(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+void mt7902_mac_sta_assoc(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 			  struct ieee80211_sta *sta)
 {
 	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
@@ -797,7 +797,7 @@ void mt7902_mac_sta_assoc(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 	mt7902_mt792x_mutex_acquire(dev);
 
 	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
-		mt76_connac_mcu_uni_add_bss(&dev->mphy, vif, &mvif->sta.wcid,
+		mt7902_mt76_connac_mcu_uni_add_bss(&dev->mphy, vif, &mvif->sta.wcid,
 					    true, mvif->mt76.ctx);
 
 	ewma_avg_signal_init(&msta->avg_ack_signal);
@@ -812,14 +812,14 @@ void mt7902_mac_sta_assoc(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_sta_assoc);
 
-void mt7902_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+void mt7902_mac_sta_remove(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 			   struct ieee80211_sta *sta)
 {
 	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 	struct mt7902_mt792x_sta *msta = (struct mt7902_mt792x_sta *)sta->drv_priv;
 
-	mt76_connac_free_pending_tx_skbs(&dev->pm, &msta->wcid);
-	mt76_connac_pm_wake(&dev->mphy, &dev->pm);
+	mt7902_mt76_connac_free_pending_tx_skbs(&dev->pm, &msta->wcid);
+	mt7902_mt76_connac_pm_wake(&dev->mphy, &dev->pm);
 
 	mt7902_mcu_sta_update(dev, sta, vif, false, MT76_STA_INFO_STATE_NONE);
 	mt7902_mac_wtbl_update(dev, msta->wcid.idx,
@@ -831,7 +831,7 @@ void mt7902_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 		mvif->wep_sta = NULL;
 		ewma_rssi_init(&mvif->rssi);
 		if (!sta->tdls)
-			mt76_connac_mcu_uni_add_bss(&dev->mphy, vif,
+			mt7902_mt76_connac_mcu_uni_add_bss(&dev->mphy, vif,
 						    &mvif->sta.wcid, false,
 						    mvif->mt76.ctx);
 	}
@@ -843,7 +843,7 @@ void mt7902_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 
 	mt7902_regd_set_6ghz_power_type(vif, false);
 
-	mt76_connac_power_save_sched(&dev->mphy, &dev->pm);
+	mt7902_mt76_connac_power_save_sched(&dev->mphy, &dev->pm);
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_sta_remove);
 
@@ -852,7 +852,7 @@ static int mt7902_set_rts_threshold(struct ieee80211_hw *hw, u32 val)
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt76_connac_mcu_set_rts_thresh(&dev->mt76, val, 0);
+	mt7902_mt76_connac_mcu_set_rts_thresh(&dev->mt76, val, 0);
 	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
@@ -869,23 +869,23 @@ mt7902_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct mt7902_mt792x_sta *msta = (struct mt7902_mt792x_sta *)sta->drv_priv;
 	u16 tid = params->tid;
 	u16 ssn = params->ssn;
-	struct mt76_txq *mtxq;
+	struct mt7902_mt76_txq *mtxq;
 	int ret = 0;
 
 	if (!txq)
 		return -EINVAL;
 
-	mtxq = (struct mt76_txq *)txq->drv_priv;
+	mtxq = (struct mt7902_mt76_txq *)txq->drv_priv;
 
 	mt7902_mt792x_mutex_acquire(dev);
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
-		mt76_rx_aggr_start(&dev->mt76, &msta->wcid, tid, ssn,
+		mt7902_mt76_rx_aggr_start(&dev->mt76, &msta->wcid, tid, ssn,
 				   params->buf_size);
 		mt7902_mcu_uni_rx_ba(dev, params, true);
 		break;
 	case IEEE80211_AMPDU_RX_STOP:
-		mt76_rx_aggr_stop(&dev->mt76, &msta->wcid, tid);
+		mt7902_mt76_rx_aggr_stop(&dev->mt76, &msta->wcid, tid);
 		mt7902_mcu_uni_rx_ba(dev, params, false);
 		break;
 	case IEEE80211_AMPDU_TX_OPERATIONAL:
@@ -925,11 +925,11 @@ static int mt7902_sta_state(struct ieee80211_hw *hw,
 
 	if (dev->pm.ds_enable) {
 		mt7902_mt792x_mutex_acquire(dev);
-		mt76_connac_sta_state_dp(&dev->mt76, old_state, new_state);
+		mt7902_mt76_connac_sta_state_dp(&dev->mt76, old_state, new_state);
 		mt7902_mt792x_mutex_release(dev);
 	}
 
-	return mt76_sta_state(hw, vif, sta, old_state, new_state);
+	return mt7902_mt76_sta_state(hw, vif, sta, old_state, new_state);
 }
 
 void mt7902_scan_work(struct work_struct *work)
@@ -940,7 +940,7 @@ void mt7902_scan_work(struct work_struct *work)
 						scan_work.work);
 
 	while (true) {
-		struct mt76_connac2_mcu_rxd *rxd;
+		struct mt7902_mt76_connac2_mcu_rxd *rxd;
 		struct sk_buff *skb;
 
 		spin_lock_bh(&phy->dev->mt76.lock);
@@ -950,7 +950,7 @@ void mt7902_scan_work(struct work_struct *work)
 		if (!skb)
 			break;
 
-		rxd = (struct mt76_connac2_mcu_rxd *)skb->data;
+		rxd = (struct mt7902_mt76_connac2_mcu_rxd *)skb->data;
 		if (rxd->eid == MCU_EVENT_SCHED_SCAN_DONE) {
 			ieee80211_sched_scan_results(phy->mt76->hw);
 		} else if (test_and_clear_bit(MT76_HW_SCANNING,
@@ -970,11 +970,11 @@ mt7902_hw_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	       struct ieee80211_scan_request *req)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	int err;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	err = mt76_connac_mcu_hw_scan(mphy, vif, req);
+	err = mt7902_mt76_connac_mcu_hw_scan(mphy, vif, req);
 	mt7902_mt792x_mutex_release(dev);
 
 	return err;
@@ -984,10 +984,10 @@ static void
 mt7902_cancel_hw_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt76_connac_mcu_cancel_hw_scan(mphy, vif);
+	mt7902_mt76_connac_mcu_cancel_hw_scan(mphy, vif);
 	mt7902_mt792x_mutex_release(dev);
 }
 
@@ -997,16 +997,16 @@ mt7902_start_sched_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			struct ieee80211_scan_ies *ies)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	int err;
 
 	mt7902_mt792x_mutex_acquire(dev);
 
-	err = mt76_connac_mcu_sched_scan_req(mphy, vif, req);
+	err = mt7902_mt76_connac_mcu_sched_scan_req(mphy, vif, req);
 	if (err < 0)
 		goto out;
 
-	err = mt76_connac_mcu_sched_scan_enable(mphy, vif, true);
+	err = mt7902_mt76_connac_mcu_sched_scan_enable(mphy, vif, true);
 out:
 	mt7902_mt792x_mutex_release(dev);
 
@@ -1017,11 +1017,11 @@ static int
 mt7902_stop_sched_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 {
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	int err;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	err = mt76_connac_mcu_sched_scan_enable(mphy, vif, false);
+	err = mt7902_mt76_connac_mcu_sched_scan_enable(mphy, vif, false);
 	mt7902_mt792x_mutex_release(dev);
 
 	return err;
@@ -1045,7 +1045,7 @@ mt7902_set_antenna(struct ieee80211_hw *hw, u32 tx_ant, u32 rx_ant)
 	phy->mt76->antenna_mask = tx_ant;
 	phy->mt76->chainmask = tx_ant;
 
-	mt76_set_stream_caps(phy->mt76, true);
+	mt7902_mt76_set_stream_caps(phy->mt76, true);
 	mt7902_set_stream_he_caps(phy);
 
 	mt7902_mt792x_mutex_release(dev);
@@ -1064,7 +1064,7 @@ static int mt7902_suspend(struct ieee80211_hw *hw,
 	cancel_delayed_work_sync(&phy->mt76->mac_work);
 
 	cancel_delayed_work_sync(&dev->pm.ps_work);
-	mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
+	mt7902_mt76_connac_free_pending_tx_skbs(&dev->pm, NULL);
 
 	mt7902_mt792x_mutex_acquire(dev);
 
@@ -1089,7 +1089,7 @@ static int mt7902_resume(struct ieee80211_hw *hw)
 	set_bit(MT76_STATE_RUNNING, &phy->mt76->state);
 	ieee80211_iterate_active_interfaces(hw,
 					    IEEE80211_IFACE_ITER_RESUME_ALL,
-					    mt76_connac_mcu_set_suspend_iter,
+					    mt7902_mt76_connac_mcu_set_suspend_iter,
 					    &dev->mphy);
 
 	ieee80211_queue_delayed_work(hw, &phy->mt76->mac_work,
@@ -1107,7 +1107,7 @@ static void mt7902_set_rekey_data(struct ieee80211_hw *hw,
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt76_connac_mcu_update_gtk_rekey(hw, vif, data);
+	mt7902_mt76_connac_mcu_update_gtk_rekey(hw, vif, data);
 	mt7902_mt792x_mutex_release(dev);
 }
 #endif /* CONFIG_PM */
@@ -1127,7 +1127,7 @@ static void mt7902_sta_set_decap_offload(struct ieee80211_hw *hw,
 	else
 		clear_bit(MT_WCID_FLAG_HDR_TRANS, &msta->wcid.flags);
 
-	mt76_connac_mcu_sta_update_hdr_trans(&dev->mt76, vif, &msta->wcid,
+	mt7902_mt76_connac_mcu_sta_update_hdr_trans(&dev->mt76, vif, &msta->wcid,
 					     MCU_UNI_CMD(STA_REC_UPDATE));
 
 	mt7902_mt792x_mutex_release(dev);
@@ -1150,7 +1150,7 @@ static void mt7902_ipv6_addr_change(struct ieee80211_hw *hw,
 			u8 bss_idx;
 			u8 pad[3];
 		} __packed hdr;
-		struct mt76_connac_arpns_tlv arpns;
+		struct mt7902_mt76_connac_arpns_tlv arpns;
 	} req_hdr = {
 		.hdr = {
 			.bss_idx = mvif->mt76.idx,
@@ -1176,9 +1176,9 @@ static void mt7902_ipv6_addr_change(struct ieee80211_hw *hw,
 		return;
 
 	req_hdr.arpns.ips_num = idx;
-	req_hdr.arpns.len = cpu_to_le16(sizeof(struct mt76_connac_arpns_tlv)
+	req_hdr.arpns.len = cpu_to_le16(sizeof(struct mt7902_mt76_connac_arpns_tlv)
 					+ idx * sizeof(struct in6_addr));
-	skb = __mt76_mcu_msg_alloc(&dev->mt76, &req_hdr,
+	skb = __mt7902_mt76_mcu_msg_alloc(&dev->mt76, &req_hdr,
 			sizeof(req_hdr) + idx * sizeof(struct in6_addr),
 			sizeof(req_hdr), GFP_ATOMIC);
 	if (!skb)
@@ -1196,17 +1196,17 @@ static void mt7902_ipv6_addr_change(struct ieee80211_hw *hw,
 int mt7902_set_tx_sar_pwr(struct ieee80211_hw *hw,
 			  const struct cfg80211_sar_specs *sar)
 {
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 
 	if (sar) {
-		int err = mt76_init_sar_power(hw, sar);
+		int err = mt7902_mt76_init_sar_power(hw, sar);
 
 		if (err)
 			return err;
 	}
 	mt7902_mt792x_init_acpi_sar_power(mt7902_mt792x_hw_phy(hw), !sar);
 
-	return mt76_connac_mcu_set_rate_txpower(mphy);
+	return mt7902_mt76_connac_mcu_set_rate_txpower(mphy);
 }
 
 static int mt7902_set_sar_specs(struct ieee80211_hw *hw,
@@ -1251,7 +1251,7 @@ mt7902_start_ap(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 
 	mt7902_mt792x_mutex_acquire(dev);
 
-	err = mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.wcid,
+	err = mt7902_mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.wcid,
 					  true, mvif->mt76.ctx);
 	if (err)
 		goto out;
@@ -1283,7 +1283,7 @@ mt7902_stop_ap(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	if (err)
 		goto out;
 
-	mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.wcid, false,
+	mt7902_mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.wcid, false,
 				    mvif->mt76.ctx);
 
 out:
@@ -1315,7 +1315,7 @@ static void mt7902_ctx_iter(void *priv, u8 *mac,
 	if (vif->type == NL80211_IFTYPE_MONITOR)
 		mt7902_mcu_config_sniffer(mvif, ctx);
 	else
-		mt76_connac_mcu_uni_set_chctx(mvif->phy->mt76, &mvif->mt76, ctx);
+		mt7902_mt76_connac_mcu_uni_set_chctx(mvif->phy->mt76, &mvif->mt76, ctx);
 }
 
 static void
@@ -1369,7 +1369,7 @@ const struct ieee80211_ops mt7902_ops = {
 	.start_ap = mt7902_start_ap,
 	.stop_ap = mt7902_stop_ap,
 	.sta_state = mt7902_sta_state,
-	.sta_pre_rcu_remove = mt76_sta_pre_rcu_remove,
+	.sta_pre_rcu_remove = mt7902_mt76_sta_pre_rcu_remove,
 	.set_key = mt7902_set_key,
 	.sta_set_decap_offload = mt7902_sta_set_decap_offload,
 #if IS_ENABLED(CONFIG_IPV6)
@@ -1377,18 +1377,18 @@ const struct ieee80211_ops mt7902_ops = {
 #endif /* CONFIG_IPV6 */
 	.ampdu_action = mt7902_ampdu_action,
 	.set_rts_threshold = mt7902_set_rts_threshold,
-	.wake_tx_queue = mt76_wake_tx_queue,
-	.release_buffered_frames = mt76_release_buffered_frames,
+	.wake_tx_queue = mt7902_mt76_wake_tx_queue,
+	.release_buffered_frames = mt7902_mt76_release_buffered_frames,
 	.channel_switch_beacon = mt7902_channel_switch_beacon,
-	.get_txpower = mt76_get_txpower,
+	.get_txpower = mt7902_mt76_get_txpower,
 	.get_stats = mt7902_mt792x_get_stats,
 	.get_et_sset_count = mt7902_mt792x_get_et_sset_count,
 	.get_et_strings = mt7902_mt792x_get_et_strings,
 	.get_et_stats = mt7902_mt792x_get_et_stats,
 	.get_tsf = mt7902_mt792x_get_tsf,
 	.set_tsf = mt7902_mt792x_set_tsf,
-	.get_survey = mt76_get_survey,
-	.get_antenna = mt76_get_antenna,
+	.get_survey = mt7902_mt76_get_survey,
+	.get_antenna = mt7902_mt76_get_antenna,
 	.set_antenna = mt7902_set_antenna,
 	.set_coverage_class = mt7902_mt792x_set_coverage_class,
 	.hw_scan = mt7902_hw_scan,

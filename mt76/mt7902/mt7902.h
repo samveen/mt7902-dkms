@@ -190,7 +190,7 @@ int mt7902_mcu_set_bss_pm(struct mt7902_mt792x_dev *dev, struct ieee80211_vif *v
 			  bool enable);
 int mt7902_mcu_sta_update(struct mt7902_mt792x_dev *dev, struct ieee80211_sta *sta,
 			  struct ieee80211_vif *vif, bool enable,
-			  enum mt76_sta_info_state state);
+			  enum mt7902_mt76_sta_info_state state);
 int mt7902_mcu_set_chan_info(struct mt7902_mt792x_phy *phy, int cmd);
 int mt7902_mcu_set_tx(struct mt7902_mt792x_dev *dev, struct ieee80211_vif *vif);
 int mt7902_mcu_set_eeprom(struct mt7902_mt792x_dev *dev);
@@ -207,9 +207,9 @@ mt7902_reg_map_l1(struct mt7902_mt792x_dev *dev, u32 addr)
 	u32 offset = FIELD_GET(MT_HIF_REMAP_L1_OFFSET, addr);
 	u32 base = FIELD_GET(MT_HIF_REMAP_L1_BASE, addr);
 
-	mt76_rmw_field(dev, MT_HIF_REMAP_L1, MT_HIF_REMAP_L1_MASK, base);
+	mt7902_mt76_rmw_field(dev, MT_HIF_REMAP_L1, MT_HIF_REMAP_L1_MASK, base);
 	/* use read to push write */
-	mt76_rr(dev, MT_HIF_REMAP_L1);
+	mt7902_mt76_rr(dev, MT_HIF_REMAP_L1);
 
 	return MT_HIF_REMAP_BASE_L1 + offset;
 }
@@ -217,13 +217,13 @@ mt7902_reg_map_l1(struct mt7902_mt792x_dev *dev, u32 addr)
 static inline u32
 mt7902_l1_rr(struct mt7902_mt792x_dev *dev, u32 addr)
 {
-	return mt76_rr(dev, mt7902_reg_map_l1(dev, addr));
+	return mt7902_mt76_rr(dev, mt7902_reg_map_l1(dev, addr));
 }
 
 static inline void
 mt7902_l1_wr(struct mt7902_mt792x_dev *dev, u32 addr, u32 val)
 {
-	mt76_wr(dev, mt7902_reg_map_l1(dev, addr), val);
+	mt7902_mt76_wr(dev, mt7902_reg_map_l1(dev, addr), val);
 }
 
 static inline u32
@@ -241,20 +241,20 @@ mt7902_l1_rmw(struct mt7902_mt792x_dev *dev, u32 addr, u32 mask, u32 val)
 void mt7902_regd_update(struct mt7902_mt792x_dev *dev);
 int mt7902_mac_init(struct mt7902_mt792x_dev *dev);
 bool mt7902_mac_wtbl_update(struct mt7902_mt792x_dev *dev, int idx, u32 mask);
-int mt7902_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+int mt7902_mac_sta_add(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 		       struct ieee80211_sta *sta);
-void mt7902_mac_sta_assoc(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+void mt7902_mac_sta_assoc(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 			  struct ieee80211_sta *sta);
-void mt7902_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+void mt7902_mac_sta_remove(struct mt7902_mt76_dev *mdev, struct ieee80211_vif *vif,
 			   struct ieee80211_sta *sta);
 void mt7902_mac_reset_work(struct work_struct *work);
-int mt7902e_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
-			   enum mt76_txq_id qid, struct mt76_wcid *wcid,
+int mt7902e_tx_prepare_skb(struct mt7902_mt76_dev *mdev, void *txwi_ptr,
+			   enum mt7902_mt76_txq_id qid, struct mt7902_mt76_wcid *wcid,
 			   struct ieee80211_sta *sta,
-			   struct mt76_tx_info *tx_info);
+			   struct mt7902_mt76_tx_info *tx_info);
 
-bool mt7902_rx_check(struct mt76_dev *mdev, void *data, int len);
-void mt7902_queue_rx_skb(struct mt76_dev *mdev, enum mt76_rxq_id q,
+bool mt7902_rx_check(struct mt7902_mt76_dev *mdev, void *data, int len);
+void mt7902_queue_rx_skb(struct mt7902_mt76_dev *mdev, enum mt7902_mt76_rxq_id q,
 			 struct sk_buff *skb, u32 *info);
 void mt7902_stats_work(struct work_struct *work);
 void mt7902_set_stream_he_caps(struct mt7902_mt792x_phy *phy);
@@ -278,7 +278,7 @@ int mt7902_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			void *data, int len);
 int mt7902_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 			 struct netlink_callback *cb, void *data, int len);
-int mt7902_mcu_parse_response(struct mt76_dev *mdev, int cmd,
+int mt7902_mcu_parse_response(struct mt7902_mt76_dev *mdev, int cmd,
 			      struct sk_buff *skb, int seq);
 
 int mt7902e_driver_own(struct mt7902_mt792x_dev *dev);
@@ -303,13 +303,13 @@ int mt7902_mcu_config_sniffer(struct mt7902_mt792x_vif *vif,
 			      struct ieee80211_chanctx_conf *ctx);
 int mt7902_mcu_get_temperature(struct mt7902_mt792x_phy *phy);
 
-int mt7902_usb_sdio_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
-				   enum mt76_txq_id qid, struct mt76_wcid *wcid,
+int mt7902_usb_sdio_tx_prepare_skb(struct mt7902_mt76_dev *mdev, void *txwi_ptr,
+				   enum mt7902_mt76_txq_id qid, struct mt7902_mt76_wcid *wcid,
 				   struct ieee80211_sta *sta,
-				   struct mt76_tx_info *tx_info);
-void mt7902_usb_sdio_tx_complete_skb(struct mt76_dev *mdev,
-				     struct mt76_queue_entry *e);
-bool mt7902_usb_sdio_tx_status_data(struct mt76_dev *mdev, u8 *update);
+				   struct mt7902_mt76_tx_info *tx_info);
+void mt7902_usb_sdio_tx_complete_skb(struct mt7902_mt76_dev *mdev,
+				     struct mt7902_mt76_queue_entry *e);
+bool mt7902_usb_sdio_tx_status_data(struct mt7902_mt76_dev *mdev, u8 *update);
 
 /* usb */
 int mt7902_mcu_uni_add_beacon_offload(struct mt7902_mt792x_dev *dev,

@@ -22,28 +22,28 @@ static const struct sdio_device_id mt7902s_table[] = {
 	{ }	/* Terminating entry */
 };
 
-static void mt7902s_txrx_worker(struct mt76_worker *w)
+static void mt7902s_txrx_worker(struct mt7902_mt76_worker *w)
 {
-	struct mt76_sdio *sdio = container_of(w, struct mt76_sdio,
+	struct mt7902_mt76_sdio *sdio = container_of(w, struct mt7902_mt76_sdio,
 					      txrx_worker);
-	struct mt76_dev *mdev = container_of(sdio, struct mt76_dev, sdio);
+	struct mt7902_mt76_dev *mdev = container_of(sdio, struct mt7902_mt76_dev, sdio);
 	struct mt7902_mt792x_dev *dev = container_of(mdev, struct mt7902_mt792x_dev, mt76);
 
-	if (!mt76_connac_pm_ref(&dev->mphy, &dev->pm)) {
+	if (!mt7902_mt76_connac_pm_ref(&dev->mphy, &dev->pm)) {
 		queue_work(mdev->wq, &dev->pm.wake_work);
 		return;
 	}
 
 	mt76s_txrx_worker(sdio);
-	mt76_connac_pm_unref(&dev->mphy, &dev->pm);
+	mt7902_mt76_connac_pm_unref(&dev->mphy, &dev->pm);
 }
 
 static void mt7902s_unregister_device(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 
 	cancel_work_sync(&dev->init_work);
-	mt76_unregister_device(&dev->mt76);
+	mt7902_mt76_unregister_device(&dev->mt76);
 	cancel_delayed_work_sync(&pm->ps_work);
 	cancel_work_sync(&pm->wake_work);
 
@@ -51,12 +51,12 @@ static void mt7902s_unregister_device(struct mt7902_mt792x_dev *dev)
 	mt7902s_wfsys_reset(dev);
 	skb_queue_purge(&dev->mt76.mcu.res_q);
 
-	mt76_free_device(&dev->mt76);
+	mt7902_mt76_free_device(&dev->mt76);
 }
 
-static int mt7902s_parse_intr(struct mt76_dev *dev, struct mt76s_intr *intr)
+static int mt7902s_parse_intr(struct mt7902_mt76_dev *dev, struct mt76s_intr *intr)
 {
-	struct mt76_sdio *sdio = &dev->sdio;
+	struct mt7902_mt76_sdio *sdio = &dev->sdio;
 	struct mt7902_sdio_intr *irq_data = sdio->intr_data;
 	int i, err;
 
@@ -88,7 +88,7 @@ static int mt7902s_parse_intr(struct mt76_dev *dev, struct mt76s_intr *intr)
 static int mt7902s_probe(struct sdio_func *func,
 			 const struct sdio_device_id *id)
 {
-	static const struct mt76_driver_ops drv_ops = {
+	static const struct mt7902_mt76_driver_ops drv_ops = {
 		.txwi_size = MT_SDIO_TXD_SIZE,
 		.drv_flags = MT_DRV_AMSDU_OFFLOAD,
 		.survey_flags = SURVEY_INFO_TIME_TX |
@@ -104,7 +104,7 @@ static int mt7902s_probe(struct sdio_func *func,
 		.sta_remove = mt7902_mac_sta_remove,
 		.update_survey = mt7902_mt792x_update_channel,
 	};
-	static const struct mt76_bus_ops mt7902s_ops = {
+	static const struct mt7902_mt76_bus_ops mt7902s_ops = {
 		.rr = mt76s_rr,
 		.rmw = mt76s_rmw,
 		.wr = mt76s_wr,
@@ -123,7 +123,7 @@ static int mt7902s_probe(struct sdio_func *func,
 	};
 	struct ieee80211_ops *ops;
 	struct mt7902_mt792x_dev *dev;
-	struct mt76_dev *mdev;
+	struct mt7902_mt76_dev *mdev;
 	u8 features;
 	int ret;
 
@@ -132,7 +132,7 @@ static int mt7902s_probe(struct sdio_func *func,
 	if (!ops)
 		return -ENOMEM;
 
-	mdev = mt76_alloc_device(&func->dev, sizeof(*dev), ops, &drv_ops);
+	mdev = mt7902_mt76_alloc_device(&func->dev, sizeof(*dev), ops, &drv_ops);
 	if (!mdev)
 		return -ENOMEM;
 
@@ -149,8 +149,8 @@ static int mt7902s_probe(struct sdio_func *func,
 	if (ret)
 		goto error;
 
-	mdev->rev = (mt76_rr(dev, MT_HW_CHIPID) << 16) |
-		    (mt76_rr(dev, MT_HW_REV) & 0xff);
+	mdev->rev = (mt7902_mt76_rr(dev, MT_HW_CHIPID) << 16) |
+		    (mt7902_mt76_rr(dev, MT_HW_REV) & 0xff);
 	dev_dbg(mdev->dev, "ASIC revision: %04x\n", mdev->rev);
 
 	mdev->sdio.parse_irq = mt7902s_parse_intr;
@@ -174,7 +174,7 @@ static int mt7902s_probe(struct sdio_func *func,
 	if (ret)
 		goto error;
 
-	ret = mt76_worker_setup(mt76_hw(dev), &mdev->sdio.txrx_worker,
+	ret = mt7902_mt76_worker_setup(mt7902_mt76_hw(dev), &mdev->sdio.txrx_worker,
 				mt7902s_txrx_worker, "sdio-txrx");
 	if (ret)
 		goto error;
@@ -189,7 +189,7 @@ static int mt7902s_probe(struct sdio_func *func,
 
 error:
 	mt76s_deinit(&dev->mt76);
-	mt76_free_device(&dev->mt76);
+	mt7902_mt76_free_device(&dev->mt76);
 
 	return ret;
 }
@@ -205,8 +205,8 @@ static int mt7902s_suspend(struct device *__dev)
 {
 	struct sdio_func *func = dev_to_sdio_func(__dev);
 	struct mt7902_mt792x_dev *dev = sdio_get_drvdata(func);
-	struct mt76_connac_pm *pm = &dev->pm;
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	int err;
 
 	pm->suspended = true;
@@ -223,26 +223,26 @@ static int mt7902s_suspend(struct device *__dev)
 	/* always enable deep sleep during suspend to reduce
 	 * power consumption
 	 */
-	mt76_connac_mcu_set_deep_sleep(mdev, true);
+	mt7902_mt76_connac_mcu_set_deep_sleep(mdev, true);
 
-	mt76_txq_schedule_all(&dev->mphy);
-	mt76_worker_disable(&mdev->tx_worker);
-	mt76_worker_disable(&mdev->sdio.status_worker);
-	mt76_worker_disable(&mdev->sdio.stat_worker);
+	mt7902_mt76_txq_schedule_all(&dev->mphy);
+	mt7902_mt76_worker_disable(&mdev->tx_worker);
+	mt7902_mt76_worker_disable(&mdev->sdio.status_worker);
+	mt7902_mt76_worker_disable(&mdev->sdio.stat_worker);
 	clear_bit(MT76_READING_STATS, &dev->mphy.state);
-	mt76_tx_status_check(mdev, true);
+	mt7902_mt76_tx_status_check(mdev, true);
 
-	mt76_worker_schedule(&mdev->sdio.txrx_worker);
+	mt7902_mt76_worker_schedule(&mdev->sdio.txrx_worker);
 	wait_event_timeout(dev->mt76.sdio.wait,
 			   mt76s_txqs_empty(&dev->mt76), 5 * HZ);
 
 	/* It is supposed that SDIO bus is idle at the point */
-	err = mt76_connac_mcu_set_hif_suspend(mdev, true);
+	err = mt7902_mt76_connac_mcu_set_hif_suspend(mdev, true);
 	if (err)
 		goto restore_worker;
 
-	mt76_worker_disable(&mdev->sdio.txrx_worker);
-	mt76_worker_disable(&mdev->sdio.net_worker);
+	mt7902_mt76_worker_disable(&mdev->sdio.txrx_worker);
+	mt7902_mt76_worker_disable(&mdev->sdio.net_worker);
 
 	err = mt7902_mt792x_mcu_fw_pmctrl(dev);
 	if (err)
@@ -253,17 +253,17 @@ static int mt7902s_suspend(struct device *__dev)
 	return 0;
 
 restore_txrx_worker:
-	mt76_worker_enable(&mdev->sdio.net_worker);
-	mt76_worker_enable(&mdev->sdio.txrx_worker);
-	mt76_connac_mcu_set_hif_suspend(mdev, false);
+	mt7902_mt76_worker_enable(&mdev->sdio.net_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.txrx_worker);
+	mt7902_mt76_connac_mcu_set_hif_suspend(mdev, false);
 
 restore_worker:
-	mt76_worker_enable(&mdev->tx_worker);
-	mt76_worker_enable(&mdev->sdio.status_worker);
-	mt76_worker_enable(&mdev->sdio.stat_worker);
+	mt7902_mt76_worker_enable(&mdev->tx_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.status_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.stat_worker);
 
 	if (!pm->ds_enable)
-		mt76_connac_mcu_set_deep_sleep(mdev, false);
+		mt7902_mt76_connac_mcu_set_deep_sleep(mdev, false);
 
 restore_suspend:
 	clear_bit(MT76_STATE_SUSPEND, &mdev->phy.state);
@@ -279,8 +279,8 @@ static int mt7902s_resume(struct device *__dev)
 {
 	struct sdio_func *func = dev_to_sdio_func(__dev);
 	struct mt7902_mt792x_dev *dev = sdio_get_drvdata(func);
-	struct mt76_connac_pm *pm = &dev->pm;
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	int err;
 
 	clear_bit(MT76_STATE_SUSPEND, &mdev->phy.state);
@@ -289,17 +289,17 @@ static int mt7902s_resume(struct device *__dev)
 	if (err < 0)
 		goto failed;
 
-	mt76_worker_enable(&mdev->tx_worker);
-	mt76_worker_enable(&mdev->sdio.txrx_worker);
-	mt76_worker_enable(&mdev->sdio.status_worker);
-	mt76_worker_enable(&mdev->sdio.net_worker);
-	mt76_worker_enable(&mdev->sdio.stat_worker);
+	mt7902_mt76_worker_enable(&mdev->tx_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.txrx_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.status_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.net_worker);
+	mt7902_mt76_worker_enable(&mdev->sdio.stat_worker);
 
 	/* restore previous ds setting */
 	if (!pm->ds_enable)
-		mt76_connac_mcu_set_deep_sleep(mdev, false);
+		mt7902_mt76_connac_mcu_set_deep_sleep(mdev, false);
 
-	err = mt76_connac_mcu_set_hif_suspend(mdev, false);
+	err = mt7902_mt76_connac_mcu_set_hif_suspend(mdev, false);
 failed:
 	pm->suspended = false;
 

@@ -27,7 +27,7 @@
 
 #define MT792x_CHIP_CAP_CLC_EVT_EN BIT(0)
 
-/* NOTE: used to map mt76_rates. idx may change if firmware expands table */
+/* NOTE: used to map mt7902_mt76_rates. idx may change if firmware expands table */
 #define MT792x_BASIC_RATES_TBL	11
 
 #define MT792x_WATCHDOG_TIME	(HZ / 4)
@@ -79,7 +79,7 @@ enum mt7902_mt792x_reg_power_type {
 DECLARE_EWMA(avg_signal, 10, 8)
 
 struct mt7902_mt792x_sta {
-	struct mt76_wcid wcid; /* must be first */
+	struct mt7902_mt76_wcid wcid; /* must be first */
 
 	struct mt7902_mt792x_vif *vif;
 
@@ -90,13 +90,13 @@ struct mt7902_mt792x_sta {
 
 	unsigned long last_txs;
 
-	struct mt76_connac_sta_key_conf bip;
+	struct mt7902_mt76_connac_sta_key_conf bip;
 };
 
 DECLARE_EWMA(rssi, 10, 8);
 
 struct mt7902_mt792x_vif {
-	struct mt76_vif mt76; /* must be first */
+	struct mt7902_mt76_vif mt76; /* must be first */
 
 	struct mt7902_mt792x_sta sta;
 	struct mt7902_mt792x_sta *wep_sta;
@@ -109,7 +109,7 @@ struct mt7902_mt792x_vif {
 };
 
 struct mt7902_mt792x_phy {
-	struct mt76_phy *mt76;
+	struct mt7902_mt76_phy *mt76;
 	struct mt7902_mt792x_dev *dev;
 
 	struct ieee80211_sband_iftype_data iftype[NUM_NL80211_BANDS][NUM_NL80211_IFTYPES];
@@ -124,7 +124,7 @@ struct mt7902_mt792x_phy {
 	u32 rx_ampdu_ts;
 	u32 ampdu_ref;
 
-	struct mt76_mib_stats mib;
+	struct mt7902_mt76_mib_stats mib;
 
 	u8 sta_work_count;
 	u8 clc_chan_conf;
@@ -174,11 +174,11 @@ struct mt7902_mt792x_hif_ops {
 
 struct mt7902_mt792x_dev {
 	union { /* must be first */
-		struct mt76_dev mt76;
-		struct mt76_phy mphy;
+		struct mt7902_mt76_dev mt76;
+		struct mt7902_mt76_phy mphy;
 	};
 
-	const struct mt76_bus_ops *bus_ops;
+	const struct mt7902_mt76_bus_ops *bus_ops;
 	struct mt7902_mt792x_phy phy;
 
 	struct work_struct reset_work;
@@ -192,8 +192,8 @@ struct mt7902_mt792x_dev {
 	u8 fw_debug;
 	u8 fw_features;
 
-	struct mt76_connac_pm pm;
-	struct mt76_connac_coredump coredump;
+	struct mt7902_mt76_connac_pm pm;
+	struct mt7902_mt76_connac_coredump coredump;
 	const struct mt7902_mt792x_hif_ops *hif_ops;
 	const struct mt7902_mt792x_irq_map *irq_map;
 
@@ -209,7 +209,7 @@ struct mt7902_mt792x_dev {
 static inline struct mt7902_mt792x_dev *
 mt7902_mt792x_hw_dev(struct ieee80211_hw *hw)
 {
-	struct mt76_phy *phy = hw->priv;
+	struct mt7902_mt76_phy *phy = hw->priv;
 
 	return container_of(phy->dev, struct mt7902_mt792x_dev, mt76);
 }
@@ -217,13 +217,13 @@ mt7902_mt792x_hw_dev(struct ieee80211_hw *hw)
 static inline struct mt7902_mt792x_phy *
 mt7902_mt792x_hw_phy(struct ieee80211_hw *hw)
 {
-	struct mt76_phy *phy = hw->priv;
+	struct mt7902_mt76_phy *phy = hw->priv;
 
 	return phy->priv;
 }
 
 static inline void
-mt7902_mt792x_get_status_freq_info(struct mt76_rx_status *status, u8 chfreq)
+mt7902_mt792x_get_status_freq_info(struct mt7902_mt76_rx_status *status, u8 chfreq)
 {
 	if (chfreq > 180) {
 		status->band = NL80211_BAND_6GHZ;
@@ -238,23 +238,23 @@ mt7902_mt792x_get_status_freq_info(struct mt76_rx_status *status, u8 chfreq)
 
 static inline bool mt7902_mt792x_dma_need_reinit(struct mt7902_mt792x_dev *dev)
 {
-	return !mt76_get_field(dev, MT_WFDMA_DUMMY_CR, MT_WFDMA_NEED_REINIT);
+	return !mt7902_mt76_get_field(dev, MT_WFDMA_DUMMY_CR, MT_WFDMA_NEED_REINIT);
 }
 
 #define mt7902_mt792x_mutex_acquire(dev)	\
-	mt76_connac_mutex_acquire(&(dev)->mt76, &(dev)->pm)
+	mt7902_mt76_connac_mutex_acquire(&(dev)->mt76, &(dev)->pm)
 #define mt7902_mt792x_mutex_release(dev)	\
-	mt76_connac_mutex_release(&(dev)->mt76, &(dev)->pm)
+	mt7902_mt76_connac_mutex_release(&(dev)->mt76, &(dev)->pm)
 
 void mt7902_mt792x_stop(struct ieee80211_hw *hw);
 void mt7902_mt792x_pm_wake_work(struct work_struct *work);
 void mt7902_mt792x_pm_power_save_work(struct work_struct *work);
-void mt7902_mt792x_reset(struct mt76_dev *mdev);
-void mt7902_mt792x_update_channel(struct mt76_phy *mphy);
+void mt7902_mt792x_reset(struct mt7902_mt76_dev *mdev);
+void mt7902_mt792x_update_channel(struct mt7902_mt76_phy *mphy);
 void mt7902_mt792x_mac_reset_counters(struct mt7902_mt792x_phy *phy);
 void mt7902_mt792x_mac_init_band(struct mt7902_mt792x_dev *dev, u8 band);
 void mt7902_mt792x_mac_assoc_rssi(struct mt7902_mt792x_dev *dev, struct sk_buff *skb);
-struct mt76_wcid *mt7902_mt792x_rx_get_wcid(struct mt7902_mt792x_dev *dev, u16 idx,
+struct mt7902_mt76_wcid *mt7902_mt792x_rx_get_wcid(struct mt7902_mt792x_dev *dev, u16 idx,
 				     bool unicast);
 void mt7902_mt792x_mac_update_mib_stats(struct mt7902_mt792x_phy *phy);
 void mt7902_mt792x_mac_set_timeing(struct mt7902_mt792x_phy *phy);
@@ -271,7 +271,7 @@ int mt7902_mt792x_get_stats(struct ieee80211_hw *hw,
 u64 mt7902_mt792x_get_tsf(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 void mt7902_mt792x_set_tsf(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		    u64 timestamp);
-void mt7902_mt792x_tx_worker(struct mt76_worker *w);
+void mt7902_mt792x_tx_worker(struct mt7902_mt76_worker *w);
 void mt7902_mt792x_roc_timer(struct timer_list *timer);
 void mt7902_mt792x_flush(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		  u32 queues, bool drop);
@@ -301,7 +301,7 @@ int mt7902_mt792x_wpdma_reset(struct mt7902_mt792x_dev *dev, bool force);
 int mt7902_mt792x_wpdma_reinit_cond(struct mt7902_mt792x_dev *dev);
 int mt7902_mt792x_dma_disable(struct mt7902_mt792x_dev *dev, bool force);
 irqreturn_t mt7902_mt792x_irq_handler(int irq, void *dev_instance);
-void mt7902_mt792x_rx_poll_complete(struct mt76_dev *mdev, enum mt76_rxq_id q);
+void mt7902_mt792x_rx_poll_complete(struct mt7902_mt76_dev *mdev, enum mt7902_mt76_rxq_id q);
 int mt7902_mt792x_poll_tx(struct napi_struct *napi, int budget);
 int mt7902_mt792x_poll_rx(struct napi_struct *napi, int budget);
 void mt7902_mt792x_irq_tasklet(unsigned long data);
@@ -323,7 +323,7 @@ int mt7902_mt792x_mcu_fw_pmctrl(struct mt7902_mt792x_dev *dev);
 
 static inline char *mt7902_mt792x_ram_name(struct mt7902_mt792x_dev *dev)
 {
-	switch (mt76_chip(&dev->mt76)) {
+	switch (mt7902_mt76_chip(&dev->mt76)) {
 	case 0x7922:
 		return MT7922_FIRMWARE_WM;
 	case 0x7925:
@@ -335,7 +335,7 @@ static inline char *mt7902_mt792x_ram_name(struct mt7902_mt792x_dev *dev)
 
 static inline char *mt7902_mt792x_patch_name(struct mt7902_mt792x_dev *dev)
 {
-	switch (mt76_chip(&dev->mt76)) {
+	switch (mt7902_mt76_chip(&dev->mt76)) {
 	case 0x7922:
 		return MT7922_ROM_PATCH;
 	case 0x7925:
@@ -354,10 +354,10 @@ int mt7902_mt792xu_dma_init(struct mt7902_mt792x_dev *dev, bool resume);
 int mt7902_mt792xu_mcu_power_on(struct mt7902_mt792x_dev *dev);
 int mt7902_mt792xu_wfsys_reset(struct mt7902_mt792x_dev *dev);
 int mt7902_mt792xu_init_reset(struct mt7902_mt792x_dev *dev);
-u32 mt7902_mt792xu_rr(struct mt76_dev *dev, u32 addr);
-void mt7902_mt792xu_wr(struct mt76_dev *dev, u32 addr, u32 val);
-u32 mt7902_mt792xu_rmw(struct mt76_dev *dev, u32 addr, u32 mask, u32 val);
-void mt7902_mt792xu_copy(struct mt76_dev *dev, u32 offset, const void *data, int len);
+u32 mt7902_mt792xu_rr(struct mt7902_mt76_dev *dev, u32 addr);
+void mt7902_mt792xu_wr(struct mt7902_mt76_dev *dev, u32 addr, u32 val);
+u32 mt7902_mt792xu_rmw(struct mt7902_mt76_dev *dev, u32 addr, u32 mask, u32 val);
+void mt7902_mt792xu_copy(struct mt7902_mt76_dev *dev, u32 offset, const void *data, int len);
 void mt7902_mt792xu_disconnect(struct usb_interface *usb_intf);
 void mt7902_mt792xu_stop(struct ieee80211_hw *hw);
 
@@ -367,7 +367,7 @@ mt7902_mt792x_skb_add_usb_sdio_hdr(struct mt7902_mt792x_dev *dev, struct sk_buff
 {
 	u32 hdr, len;
 
-	len = mt76_is_usb(&dev->mt76) ? skb->len : skb->len + sizeof(hdr);
+	len = mt7902_mt76_is_usb(&dev->mt76) ? skb->len : skb->len + sizeof(hdr);
 	hdr = FIELD_PREP(MT792x_SDIO_HDR_TX_BYTES, len) |
 	      FIELD_PREP(MT792x_SDIO_HDR_PKT_TYPE, type);
 

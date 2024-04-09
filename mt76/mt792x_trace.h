@@ -15,7 +15,7 @@
 #define MAXNAME		32
 #define DEV_ENTRY	__array(char, wiphy_name, 32)
 #define DEV_ASSIGN	strscpy(__entry->wiphy_name,	\
-				wiphy_name(mt76_hw(dev)->wiphy), MAXNAME)
+				wiphy_name(mt7902_mt76_hw(dev)->wiphy), MAXNAME)
 #define DEV_PR_FMT	"%s"
 #define DEV_PR_ARG	__entry->wiphy_name
 #define LP_STATE_PR_ARG	__entry->lp_state ? "lp ready" : "lp not ready"

@@ -39,8 +39,8 @@ mt7902_tm_set(struct mt7902_mt792x_dev *dev, struct mt7902_tm_cmd *req)
 		.param1 = cpu_to_le32(req->param1),
 	};
 	bool testmode = false, normal = false;
-	struct mt76_connac_pm *pm = &dev->pm;
-	struct mt76_phy *phy = &dev->mphy;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_phy *phy = &dev->mphy;
 	int ret = -ENOTCONN;
 
 	mutex_lock(&dev->mt76.mutex);
@@ -62,10 +62,10 @@ mt7902_tm_set(struct mt7902_mt792x_dev *dev, struct mt7902_tm_cmd *req)
 		phy->test.state = MT76_TM_STATE_ON;
 	}
 
-	if (!mt76_testmode_enabled(phy))
+	if (!mt7902_mt76_testmode_enabled(phy))
 		goto out;
 
-	ret = mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(TEST_CTRL), &cmd,
+	ret = mt7902_mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(TEST_CTRL), &cmd,
 				sizeof(cmd), false);
 	if (ret)
 		goto out;
@@ -94,7 +94,7 @@ mt7902_tm_query(struct mt7902_mt792x_dev *dev, struct mt7902_tm_cmd *req,
 	struct sk_buff *skb;
 	int ret;
 
-	ret = mt76_mcu_send_and_get_msg(&dev->mt76, MCU_CE_CMD(TEST_CTRL),
+	ret = mt7902_mt76_mcu_send_and_get_msg(&dev->mt76, MCU_CE_CMD(TEST_CTRL),
 					&cmd, sizeof(cmd), true, &skb);
 	if (ret)
 		goto out;
@@ -112,7 +112,7 @@ int mt7902_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			void *data, int len)
 {
 	struct nlattr *tb[NUM_MT76_TM_ATTRS];
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	struct mt7902_mt792x_phy *phy = mphy->priv;
 	int err;
 
@@ -121,7 +121,7 @@ int mt7902_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		return -ENOTCONN;
 
 	err = nla_parse_deprecated(tb, MT76_TM_ATTR_MAX, data, len,
-				   mt76_tm_policy, NULL);
+				   mt7902_mt76_tm_policy, NULL);
 	if (err)
 		return err;
 
@@ -149,20 +149,20 @@ int mt7902_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 			 struct netlink_callback *cb, void *data, int len)
 {
 	struct nlattr *tb[NUM_MT76_TM_ATTRS];
-	struct mt76_phy *mphy = hw->priv;
+	struct mt7902_mt76_phy *mphy = hw->priv;
 	struct mt7902_mt792x_phy *phy = mphy->priv;
 	int err;
 
 	if (!test_bit(MT76_STATE_RUNNING, &mphy->state) ||
 	    !(hw->conf.flags & IEEE80211_CONF_MONITOR) ||
-	    !mt76_testmode_enabled(mphy))
+	    !mt7902_mt76_testmode_enabled(mphy))
 		return -ENOTCONN;
 
 	if (cb->args[2]++ > 0)
 		return -ENOENT;
 
 	err = nla_parse_deprecated(tb, MT76_TM_ATTR_MAX, data, len,
-				   mt76_tm_policy, NULL);
+				   mt7902_mt76_tm_policy, NULL);
 	if (err)
 		return err;
 

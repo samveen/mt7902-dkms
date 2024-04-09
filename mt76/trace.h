@@ -30,7 +30,7 @@
 #define TXID_PR_ARG	__entry->wcid, __entry->pktid
 
 DECLARE_EVENT_CLASS(dev_reg_evt,
-	TP_PROTO(struct mt76_dev *dev, u32 reg, u32 val),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u32 reg, u32 val),
 	TP_ARGS(dev, reg, val),
 	TP_STRUCT__entry(
 		DEV_ENTRY
@@ -47,17 +47,17 @@ DECLARE_EVENT_CLASS(dev_reg_evt,
 );
 
 DEFINE_EVENT(dev_reg_evt, reg_rr,
-	TP_PROTO(struct mt76_dev *dev, u32 reg, u32 val),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u32 reg, u32 val),
 	TP_ARGS(dev, reg, val)
 );
 
 DEFINE_EVENT(dev_reg_evt, reg_wr,
-	TP_PROTO(struct mt76_dev *dev, u32 reg, u32 val),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u32 reg, u32 val),
 	TP_ARGS(dev, reg, val)
 );
 
 TRACE_EVENT(dev_irq,
-	TP_PROTO(struct mt76_dev *dev, u32 val, u32 mask),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u32 val, u32 mask),
 
 	TP_ARGS(dev, val, mask),
 
@@ -80,7 +80,7 @@ TRACE_EVENT(dev_irq,
 );
 
 DECLARE_EVENT_CLASS(dev_txid_evt,
-	TP_PROTO(struct mt76_dev *dev, u8 wcid, u8 pktid),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u8 wcid, u8 pktid),
 	TP_ARGS(dev, wcid, pktid),
 	TP_STRUCT__entry(
 		DEV_ENTRY
@@ -97,7 +97,7 @@ DECLARE_EVENT_CLASS(dev_txid_evt,
 );
 
 DEFINE_EVENT(dev_txid_evt, mac_txdone,
-	TP_PROTO(struct mt76_dev *dev, u8 wcid, u8 pktid),
+	TP_PROTO(struct mt7902_mt76_dev *dev, u8 wcid, u8 pktid),
 	TP_ARGS(dev, wcid, pktid)
 );
 

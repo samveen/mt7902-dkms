@@ -64,12 +64,12 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 #define IS_UNII_INVALID(idx, sfreq, efreq) \
 	(!(dev->phy.clc_chan_conf & BIT(idx)) && (cfreq) >= (sfreq) && (cfreq) <= (efreq))
 	struct ieee80211_supported_band *sband;
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	struct device_node *np, *band_np;
 	struct ieee80211_channel *ch;
 	int i, cfreq;
 
-	np = mt76_find_power_limits_node(mdev);
+	np = mt7902_mt76_find_power_limits_node(mdev);
 
 	sband = wiphy->bands[NL80211_BAND_5GHZ];
 	band_np = np ? of_get_child_by_name(np, "txpower-5g") : NULL;
@@ -77,7 +77,7 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 		ch = &sband->channels[i];
 		cfreq = ch->center_freq;
 
-		if (np && (!band_np || !mt76_find_channel_node(band_np, ch))) {
+		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
 			ch->flags |= IEEE80211_CHAN_DISABLED;
 			continue;
 		}
@@ -96,7 +96,7 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 		ch = &sband->channels[i];
 		cfreq = ch->center_freq;
 
-		if (np && (!band_np || !mt76_find_channel_node(band_np, ch))) {
+		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
 			ch->flags |= IEEE80211_CHAN_DISABLED;
 			continue;
 		}
@@ -112,13 +112,13 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 
 void mt7902_regd_update(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	struct ieee80211_hw *hw = mdev->hw;
 	struct wiphy *wiphy = hw->wiphy;
 
 	mt7902_mcu_set_clc(dev, mdev->alpha2, dev->country_ie_env);
 	mt7902_regd_channel_update(wiphy, dev);
-	mt76_connac_mcu_set_channel_domain(hw->priv);
+	mt7902_mt76_connac_mcu_set_channel_domain(hw->priv);
 	mt7902_set_tx_sar_pwr(hw, NULL);
 }
 EXPORT_SYMBOL_GPL(mt7902_regd_update);
@@ -129,7 +129,7 @@ mt7902_regd_notifier(struct wiphy *wiphy,
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 
 	memcpy(dev->mt76.alpha2, request->alpha2, sizeof(dev->mt76.alpha2));
 	dev->mt76.region = request->dfs_region;
@@ -147,11 +147,11 @@ int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 {
 	int i;
 
-	mt76_rmw_field(dev, MT_MDP_DCR1, MT_MDP_DCR1_MAX_RX_LEN, 1536);
+	mt7902_mt76_rmw_field(dev, MT_MDP_DCR1, MT_MDP_DCR1_MAX_RX_LEN, 1536);
 	/* enable hardware de-agg */
-	mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_DAMSDU_EN);
+	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_DAMSDU_EN);
 	/* enable hardware rx header translation */
-	mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_RX_HDR_TRANS_EN);
+	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_RX_HDR_TRANS_EN);
 
 	for (i = 0; i < MT792x_WTBL_SIZE; i++)
 		mt7902_mac_wtbl_update(dev, i,
@@ -159,7 +159,7 @@ int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 	for (i = 0; i < 2; i++)
 		mt7902_mt792x_mac_init_band(dev, i);
 
-	return mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
+	return mt7902_mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_init);
 
@@ -170,12 +170,12 @@ static int __mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 	/* force firmware operation mode into normal state,
 	 * which should be set before firmware download stage.
 	 */
-	mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
+	mt7902_mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
 	ret = mt7902_mt792x_mcu_init(dev);
 	if (ret)
 		goto out;
 
-	mt76_eeprom_override(&dev->mphy);
+	mt7902_mt76_eeprom_override(&dev->mphy);
 
 	ret = mt7902_mcu_set_eeprom(dev);
 	if (ret)
@@ -218,11 +218,11 @@ static void mt7902_init_work(struct work_struct *work)
 	if (ret)
 		return;
 
-	mt76_set_stream_caps(&dev->mphy, true);
+	mt7902_mt76_set_stream_caps(&dev->mphy, true);
 	mt7902_set_stream_he_caps(&dev->phy);
 
-	ret = mt76_register_device(&dev->mt76, true, mt76_rates,
-				   ARRAY_SIZE(mt76_rates));
+	ret = mt7902_mt76_register_device(&dev->mt76, true, mt7902_mt76_rates,
+				   ARRAY_SIZE(mt7902_mt76_rates));
 	if (ret) {
 		dev_err(dev->mt76.dev, "register device failed\n");
 		return;
@@ -243,12 +243,12 @@ static void mt7902_init_work(struct work_struct *work)
 	/* we support chip reset now */
 	dev->hw_init_done = true;
 
-	mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
+	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
 }
 
 int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 {
-	struct ieee80211_hw *hw = mt76_hw(dev);
+	struct ieee80211_hw *hw = mt7902_mt76_hw(dev);
 	int ret;
 
 	dev->phy.dev = dev;
@@ -261,7 +261,7 @@ int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 	spin_lock_init(&dev->pm.wake.lock);
 	mutex_init(&dev->pm.mutex);
 	init_waitqueue_head(&dev->pm.wait);
-	if (mt76_is_sdio(&dev->mt76))
+	if (mt7902_mt76_is_sdio(&dev->mt76))
 		init_waitqueue_head(&dev->mt76.sdio.wait);
 	spin_lock_init(&dev->pm.txq_lock);
 	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt7902_mt792x_mac_work);
@@ -284,14 +284,14 @@ int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 	dev->pm.idle_timeout = MT792x_PM_TIMEOUT;
 	dev->pm.stats.last_wake_event = jiffies;
 	dev->pm.stats.last_doze_event = jiffies;
-	if (!mt76_is_usb(&dev->mt76)) {
+	if (!mt7902_mt76_is_usb(&dev->mt76)) {
 		dev->pm.enable_user = true;
 		dev->pm.enable = true;
 		dev->pm.ds_enable_user = true;
 		dev->pm.ds_enable = true;
 	}
 
-	if (!mt76_is_mmio(&dev->mt76))
+	if (!mt7902_mt76_is_mmio(&dev->mt76))
 		hw->extra_tx_headroom += MT_SDIO_TXD_SIZE + MT_SDIO_HDR_SIZE;
 
 	mt7902_mt792x_init_acpi_sar(dev);
