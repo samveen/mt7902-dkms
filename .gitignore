@@ -4,7 +4,7 @@
 *.zip
 
 *.o
-*.o.cmd
+*.cmd
 *.ko
 *.rej
 

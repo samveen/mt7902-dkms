@@ -29,6 +29,8 @@ int mt7902_mt76_connac_mcu_patch_sem_ctrl(struct mt7902_mt76_dev *dev, bool get)
 		.op = cpu_to_le32(op),
 	};
 
+	dev_info(dev->dev, "Calling mt7902_mt76_mcu_send_message with params %d\n", req.op);
+
 	return mt7902_mt76_mcu_send_msg(dev, MCU_CMD(PATCH_SEM_CONTROL),
 				 &req, sizeof(req), true);
 }
@@ -3007,7 +3009,11 @@ int mt7902_mt76_connac2_load_patch(struct mt7902_mt76_dev *dev, const char *fw_n
 	const struct mt7902_mt76_connac2_patch_hdr *hdr;
 	const struct firmware *fw = NULL;
 
+	dev_info(dev->dev, "Entering mt7902_mt76_connac_mcu_patch_sem_ctrl function\n");
 	sem = mt7902_mt76_connac_mcu_patch_sem_ctrl(dev, true);
+
+	dump_stack();
+
 	switch (sem) {
 	case PATCH_IS_DL:
 		return 0;
