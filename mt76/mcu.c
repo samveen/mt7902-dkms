@@ -34,15 +34,26 @@ struct sk_buff *mt7902_mt76_mcu_get_response(struct mt7902_mt76_dev *dev,
 {
 	unsigned long timeout;
 
-	if (!time_is_after_jiffies(expires))
+	// dump_stack();
+	dev_info(dev->dev, "mt7902_mt76_mcu_get_response expires: %ld\n", expires);
+
+	if (!time_is_after_jiffies(expires)) {
+		dev_info(dev->dev, "mt7902_mt76_mcu_get_response time expired\n");
 		return NULL;
+	}
 
 	timeout = expires - jiffies;
+	dev_info(dev->dev, "mt7902_mt76_mcu_get_response timeout: %ld\n", timeout);
+
 	wait_event_timeout(dev->mcu.wait,
 			   (!skb_queue_empty(&dev->mcu.res_q) ||
 			    test_bit(MT76_MCU_RESET, &dev->phy.state)),
 			   timeout);
-	return skb_dequeue(&dev->mcu.res_q);
+
+	struct sk_buff * ret = skb_dequeue(&dev->mcu.res_q);
+	dev_info(dev->dev, "mt7902_mt76_mcu_get_response ret: %p\n", ret);
+	dump_stack();
+	return ret; 
 }
 EXPORT_SYMBOL_GPL(mt7902_mt76_mcu_get_response);
 
@@ -81,8 +92,6 @@ int mt7902_mt76_mcu_skb_send_and_get_msg(struct mt7902_mt76_dev *dev, struct sk_
 	unsigned long expires;
 	int ret, seq;
 
-	dump_stack();
-
 	if (ret_skb)
 		*ret_skb = NULL;
 
@@ -104,6 +113,17 @@ int mt7902_mt76_mcu_skb_send_and_get_msg(struct mt7902_mt76_dev *dev, struct sk_
 	do {
 		dev_info(dev->dev, "mt7902_mt76_mcu_skb_send_and_get_msg expires: %ld\n", expires);
 		skb = mt7902_mt76_mcu_get_response(dev, expires);
+
+		dev_info(dev->dev, "SKB info: %p\n", skb);
+		// unsigned char *data_ptr;
+		// data_ptr = skb->data;
+		// // dev_info(dev->dev, "mt7902_mt76_mcu_get_response Response : %p\n", skb->data);
+		//
+		// for (int i = 0; i < skb->len; i++) {
+		// 	dev_info(dev->dev, "%02X ", data_ptr[i]);
+		// }
+		// dev_info(dev->dev, "\n");
+
 		ret = dev->mcu_ops->mcu_parse_response(dev, cmd, skb, seq);
 		dev_info(dev->dev, "mt7902_mt76_mcu_skb_send_and_get_msg > mcu_parse_response cmd: %d, ret: %d\n", cmd, ret);
 		if (!ret && ret_skb)

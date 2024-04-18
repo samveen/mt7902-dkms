@@ -3012,7 +3012,7 @@ int mt7902_mt76_connac2_load_patch(struct mt7902_mt76_dev *dev, const char *fw_n
 	dev_info(dev->dev, "Entering mt7902_mt76_connac_mcu_patch_sem_ctrl function\n");
 	sem = mt7902_mt76_connac_mcu_patch_sem_ctrl(dev, true);
 
-	dump_stack();
+	// dump_stack();
 
 	switch (sem) {
 	case PATCH_IS_DL:
