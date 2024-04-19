@@ -16,13 +16,13 @@ static ssize_t mt7902_thermal_temp_show(struct device *dev,
 {
 	switch (to_sensor_dev_attr(attr)->index) {
 	case 0: {
-		struct mt792x_phy *phy = dev_get_drvdata(dev);
-		struct mt792x_dev *mdev = phy->dev;
+		struct mt7902_mt792x_phy *phy = dev_get_drvdata(dev);
+		struct mt7902_mt792x_dev *mdev = phy->dev;
 		int temperature;
 
-		mt792x_mutex_acquire(mdev);
+		mt7902_mt792x_mutex_acquire(mdev);
 		temperature = mt7902_mcu_get_temperature(phy);
-		mt792x_mutex_release(mdev);
+		mt7902_mt792x_mutex_release(mdev);
 
 		if (temperature < 0)
 			return temperature;
@@ -41,7 +41,7 @@ static struct attribute *mt7902_hwmon_attrs[] = {
 };
 ATTRIBUTE_GROUPS(mt7902_hwmon);
 
-static int mt7902_thermal_init(struct mt792x_phy *phy)
+static int mt7902_thermal_init(struct mt7902_mt792x_phy *phy)
 {
 	struct wiphy *wiphy = phy->mt76->hw->wiphy;
 	struct device *hwmon;
@@ -59,17 +59,17 @@ static int mt7902_thermal_init(struct mt792x_phy *phy)
 }
 
 static void
-mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
+mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
 {
 #define IS_UNII_INVALID(idx, sfreq, efreq) \
 	(!(dev->phy.clc_chan_conf & BIT(idx)) && (cfreq) >= (sfreq) && (cfreq) <= (efreq))
 	struct ieee80211_supported_band *sband;
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	struct device_node *np, *band_np;
 	struct ieee80211_channel *ch;
 	int i, cfreq;
 
-	np = mt76_find_power_limits_node(mdev);
+	np = mt7902_mt76_find_power_limits_node(mdev);
 
 	sband = wiphy->bands[NL80211_BAND_5GHZ];
 	band_np = np ? of_get_child_by_name(np, "txpower-5g") : NULL;
@@ -77,7 +77,7 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
 		ch = &sband->channels[i];
 		cfreq = ch->center_freq;
 
-		if (np && (!band_np || !mt76_find_channel_node(band_np, ch))) {
+		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
 			ch->flags |= IEEE80211_CHAN_DISABLED;
 			continue;
 		}
@@ -96,7 +96,7 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
 		ch = &sband->channels[i];
 		cfreq = ch->center_freq;
 
-		if (np && (!band_np || !mt76_find_channel_node(band_np, ch))) {
+		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
 			ch->flags |= IEEE80211_CHAN_DISABLED;
 			continue;
 		}
@@ -110,15 +110,15 @@ mt7902_regd_channel_update(struct wiphy *wiphy, struct mt792x_dev *dev)
 	}
 }
 
-void mt7902_regd_update(struct mt792x_dev *dev)
+void mt7902_regd_update(struct mt7902_mt792x_dev *dev)
 {
-	struct mt76_dev *mdev = &dev->mt76;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 	struct ieee80211_hw *hw = mdev->hw;
 	struct wiphy *wiphy = hw->wiphy;
 
 	mt7902_mcu_set_clc(dev, mdev->alpha2, dev->country_ie_env);
 	mt7902_regd_channel_update(wiphy, dev);
-	mt76_connac_mcu_set_channel_domain(hw->priv);
+	mt7902_mt76_connac_mcu_set_channel_domain(hw->priv);
 	mt7902_set_tx_sar_pwr(hw, NULL);
 }
 EXPORT_SYMBOL_GPL(mt7902_regd_update);
@@ -128,8 +128,8 @@ mt7902_regd_notifier(struct wiphy *wiphy,
 		     struct regulatory_request *request)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
-	struct mt792x_dev *dev = mt792x_hw_dev(hw);
-	struct mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
+	struct mt7902_mt76_connac_pm *pm = &dev->pm;
 
 	memcpy(dev->mt76.alpha2, request->alpha2, sizeof(dev->mt76.alpha2));
 	dev->mt76.region = request->dfs_region;
@@ -138,44 +138,44 @@ mt7902_regd_notifier(struct wiphy *wiphy,
 	if (pm->suspended)
 		return;
 
-	mt792x_mutex_acquire(dev);
+	mt7902_mt792x_mutex_acquire(dev);
 	mt7902_regd_update(dev);
-	mt792x_mutex_release(dev);
+	mt7902_mt792x_mutex_release(dev);
 }
 
-int mt7902_mac_init(struct mt792x_dev *dev)
+int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 {
 	int i;
 
-	mt76_rmw_field(dev, MT_MDP_DCR1, MT_MDP_DCR1_MAX_RX_LEN, 1536);
+	mt7902_mt76_rmw_field(dev, MT_MDP_DCR1, MT_MDP_DCR1_MAX_RX_LEN, 1536);
 	/* enable hardware de-agg */
-	mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_DAMSDU_EN);
+	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_DAMSDU_EN);
 	/* enable hardware rx header translation */
-	mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_RX_HDR_TRANS_EN);
+	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_RX_HDR_TRANS_EN);
 
 	for (i = 0; i < MT792x_WTBL_SIZE; i++)
 		mt7902_mac_wtbl_update(dev, i,
 				       MT_WTBL_UPDATE_ADM_COUNT_CLEAR);
 	for (i = 0; i < 2; i++)
-		mt792x_mac_init_band(dev, i);
+		mt7902_mt792x_mac_init_band(dev, i);
 
-	return mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
+	return mt7902_mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_init);
 
-static int __mt7902_init_hardware(struct mt792x_dev *dev)
+static int __mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 {
 	int ret;
 
 	/* force firmware operation mode into normal state,
 	 * which should be set before firmware download stage.
 	 */
-	mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
-	ret = mt792x_mcu_init(dev);
+	mt7902_mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
+	ret = mt7902_mt792x_mcu_init(dev);
 	if (ret)
 		goto out;
 
-	mt76_eeprom_override(&dev->mphy);
+	mt7902_mt76_eeprom_override(&dev->mphy);
 
 	ret = mt7902_mcu_set_eeprom(dev);
 	if (ret)
@@ -186,7 +186,7 @@ out:
 	return ret;
 }
 
-static int mt7902_init_hardware(struct mt792x_dev *dev)
+static int mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 {
 	int ret, i;
 
@@ -197,7 +197,7 @@ static int mt7902_init_hardware(struct mt792x_dev *dev)
 		if (!ret)
 			break;
 
-		mt792x_init_reset(dev);
+		mt7902_mt792x_init_reset(dev);
 	}
 
 	if (i == MT792x_MCU_INIT_RETRY_COUNT) {
@@ -210,7 +210,7 @@ static int mt7902_init_hardware(struct mt792x_dev *dev)
 
 static void mt7902_init_work(struct work_struct *work)
 {
-	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,
+	struct mt7902_mt792x_dev *dev = container_of(work, struct mt7902_mt792x_dev,
 					      init_work);
 	int ret;
 
@@ -218,11 +218,11 @@ static void mt7902_init_work(struct work_struct *work)
 	if (ret)
 		return;
 
-	mt76_set_stream_caps(&dev->mphy, true);
+	mt7902_mt76_set_stream_caps(&dev->mphy, true);
 	mt7902_set_stream_he_caps(&dev->phy);
 
-	ret = mt76_register_device(&dev->mt76, true, mt76_rates,
-				   ARRAY_SIZE(mt76_rates));
+	ret = mt7902_mt76_register_device(&dev->mt76, true, mt7902_mt76_rates,
+				   ARRAY_SIZE(mt7902_mt76_rates));
 	if (ret) {
 		dev_err(dev->mt76.dev, "register device failed\n");
 		return;
@@ -243,28 +243,28 @@ static void mt7902_init_work(struct work_struct *work)
 	/* we support chip reset now */
 	dev->hw_init_done = true;
 
-	mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
+	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
 }
 
-int mt7902_register_device(struct mt792x_dev *dev)
+int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 {
-	struct ieee80211_hw *hw = mt76_hw(dev);
+	struct ieee80211_hw *hw = mt7902_mt76_hw(dev);
 	int ret;
 
 	dev->phy.dev = dev;
 	dev->phy.mt76 = &dev->mt76.phy;
 	dev->mt76.phy.priv = &dev->phy;
-	dev->mt76.tx_worker.fn = mt792x_tx_worker;
+	dev->mt76.tx_worker.fn = mt7902_mt792x_tx_worker;
 
-	INIT_DELAYED_WORK(&dev->pm.ps_work, mt792x_pm_power_save_work);
-	INIT_WORK(&dev->pm.wake_work, mt792x_pm_wake_work);
+	INIT_DELAYED_WORK(&dev->pm.ps_work, mt7902_mt792x_pm_power_save_work);
+	INIT_WORK(&dev->pm.wake_work, mt7902_mt792x_pm_wake_work);
 	spin_lock_init(&dev->pm.wake.lock);
 	mutex_init(&dev->pm.mutex);
 	init_waitqueue_head(&dev->pm.wait);
-	if (mt76_is_sdio(&dev->mt76))
+	if (mt7902_mt76_is_sdio(&dev->mt76))
 		init_waitqueue_head(&dev->mt76.sdio.wait);
 	spin_lock_init(&dev->pm.txq_lock);
-	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt792x_mac_work);
+	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt7902_mt792x_mac_work);
 	INIT_DELAYED_WORK(&dev->phy.scan_work, mt7902_scan_work);
 	INIT_DELAYED_WORK(&dev->coredump.work, mt7902_coredump_work);
 #if IS_ENABLED(CONFIG_IPV6)
@@ -278,29 +278,29 @@ int mt7902_register_device(struct mt792x_dev *dev)
 	INIT_WORK(&dev->init_work, mt7902_init_work);
 
 	INIT_WORK(&dev->phy.roc_work, mt7902_roc_work);
-	timer_setup(&dev->phy.roc_timer, mt792x_roc_timer, 0);
+	timer_setup(&dev->phy.roc_timer, mt7902_mt792x_roc_timer, 0);
 	init_waitqueue_head(&dev->phy.roc_wait);
 
 	dev->pm.idle_timeout = MT792x_PM_TIMEOUT;
 	dev->pm.stats.last_wake_event = jiffies;
 	dev->pm.stats.last_doze_event = jiffies;
-	if (!mt76_is_usb(&dev->mt76)) {
+	if (!mt7902_mt76_is_usb(&dev->mt76)) {
 		dev->pm.enable_user = true;
 		dev->pm.enable = true;
 		dev->pm.ds_enable_user = true;
 		dev->pm.ds_enable = true;
 	}
 
-	if (!mt76_is_mmio(&dev->mt76))
+	if (!mt7902_mt76_is_mmio(&dev->mt76))
 		hw->extra_tx_headroom += MT_SDIO_TXD_SIZE + MT_SDIO_HDR_SIZE;
 
-	mt792x_init_acpi_sar(dev);
+	mt7902_mt792x_init_acpi_sar(dev);
 
-	ret = mt792x_init_wcid(dev);
+	ret = mt7902_mt792x_init_wcid(dev);
 	if (ret)
 		return ret;
 
-	ret = mt792x_init_wiphy(hw);
+	ret = mt7902_mt792x_init_wiphy(hw);
 	if (ret)
 		return ret;
 

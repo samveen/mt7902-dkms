@@ -10,18 +10,18 @@
 #include "mt792x.h"
 
 #undef TRACE_SYSTEM
-#define TRACE_SYSTEM mt792x
+#define TRACE_SYSTEM mt7902_mt792x
 
 #define MAXNAME		32
 #define DEV_ENTRY	__array(char, wiphy_name, 32)
 #define DEV_ASSIGN	strscpy(__entry->wiphy_name,	\
-				wiphy_name(mt76_hw(dev)->wiphy), MAXNAME)
+				wiphy_name(mt7902_mt76_hw(dev)->wiphy), MAXNAME)
 #define DEV_PR_FMT	"%s"
 #define DEV_PR_ARG	__entry->wiphy_name
 #define LP_STATE_PR_ARG	__entry->lp_state ? "lp ready" : "lp not ready"
 
 TRACE_EVENT(lp_event,
-	TP_PROTO(struct mt792x_dev *dev, u8 lp_state),
+	TP_PROTO(struct mt7902_mt792x_dev *dev, u8 lp_state),
 
 	TP_ARGS(dev, lp_state),
 
@@ -46,6 +46,6 @@ TRACE_EVENT(lp_event,
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH .
 #undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_FILE mt792x_trace
+#define TRACE_INCLUDE_FILE mt7902_mt792x_trace
 
 #include <trace/define_trace.h>

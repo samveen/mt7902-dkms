@@ -41,26 +41,26 @@
 #define MT_FCE_INFO_LEN			4
 #define MT_RX_RXWI_LEN			32
 
-struct mt76_desc {
+struct mt7902_mt76_desc {
 	__le32 buf0;
 	__le32 ctrl;
 	__le32 buf1;
 	__le32 info;
 } __packed __aligned(4);
 
-struct mt76_wed_rro_desc {
+struct mt7902_mt76_wed_rro_desc {
 	__le32 buf0;
 	__le32 buf1;
 } __packed __aligned(4);
 
-enum mt76_qsel {
+enum mt7902_mt76_qsel {
 	MT_QSEL_MGMT,
 	MT_QSEL_HCCA,
 	MT_QSEL_EDCA,
 	MT_QSEL_EDCA_2,
 };
 
-enum mt76_mcu_evt_type {
+enum mt7902_mt76_mcu_evt_type {
 	EVT_CMD_DONE,
 	EVT_CMD_ERROR,
 	EVT_CMD_RETRY,
@@ -70,28 +70,31 @@ enum mt76_mcu_evt_type {
 	EVT_EVENT_DFS_DETECT_RSP,
 };
 
-enum mt76_dma_wed_ind_reason {
+enum mt7902_mt76_dma_wed_ind_reason {
 	MT_DMA_WED_IND_REASON_NORMAL,
 	MT_DMA_WED_IND_REASON_REPEAT,
 	MT_DMA_WED_IND_REASON_OLDPKT,
 };
 
-int mt76_dma_rx_poll(struct napi_struct *napi, int budget);
-void mt76_dma_attach(struct mt76_dev *dev);
-void mt76_dma_cleanup(struct mt76_dev *dev);
-int mt76_dma_wed_setup(struct mt76_dev *dev, struct mt76_queue *q, bool reset);
-void mt76_dma_wed_reset(struct mt76_dev *dev);
+int mt7902_mt76_dma_rx_poll(struct napi_struct *napi, int budget);
+void mt7902_mt76_dma_attach(struct mt7902_mt76_dev *dev);
+void mt7902_mt76_dma_cleanup(struct mt7902_mt76_dev *dev);
+int mt7902_mt76_dma_rx_fill(struct mt7902_mt76_dev *dev, struct mt7902_mt76_queue *q,
+		     bool allow_direct);
+void __mt7902_mt76_dma_queue_reset(struct mt7902_mt76_dev *dev, struct mt7902_mt76_queue *q,
+			    bool reset_idx);
+void mt7902_mt76_dma_queue_reset(struct mt7902_mt76_dev *dev, struct mt7902_mt76_queue *q);
 
 static inline void
-mt76_dma_reset_tx_queue(struct mt76_dev *dev, struct mt76_queue *q)
+mt7902_mt76_dma_reset_tx_queue(struct mt7902_mt76_dev *dev, struct mt7902_mt76_queue *q)
 {
 	dev->queue_ops->reset_q(dev, q);
 	if (mtk_wed_device_active(&dev->mmio.wed))
-		mt76_dma_wed_setup(dev, q, true);
+		mt7902_mt76_wed_dma_setup(dev, q, true);
 }
 
 static inline void
-mt76_dma_should_drop_buf(bool *drop, u32 ctrl, u32 buf1, u32 info)
+mt7902_mt76_dma_should_drop_buf(bool *drop, u32 ctrl, u32 buf1, u32 info)
 {
 	if (!drop)
 		return;

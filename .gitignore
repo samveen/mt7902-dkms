@@ -4,7 +4,9 @@
 *.zip
 
 *.o
+*.cmd
 *.ko
 *.rej
 
 firmware/
+.backup/

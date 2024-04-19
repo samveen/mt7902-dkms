@@ -78,13 +78,13 @@ enum {
 	REPEATER_BSSID_MAX = 0x3f,
 };
 
-struct mt76_connac_reg_map {
+struct mt7902_mt76_connac_reg_map {
 	u32 phys;
 	u32 maps;
 	u32 size;
 };
 
-struct mt76_connac_pm {
+struct mt7902_mt76_connac_pm {
 	bool enable:1;
 	bool enable_user:1;
 	bool ds_enable:1;
@@ -93,7 +93,7 @@ struct mt76_connac_pm {
 
 	spinlock_t txq_lock;
 	struct {
-		struct mt76_wcid *wcid;
+		struct mt7902_mt76_wcid *wcid;
 		struct sk_buff *skb;
 	} tx_q[IEEE80211_NUM_ACS];
 
@@ -119,20 +119,20 @@ struct mt76_connac_pm {
 	} stats;
 };
 
-struct mt76_connac_coredump {
+struct mt7902_mt76_connac_coredump {
 	struct sk_buff_head msg_list;
 	struct delayed_work work;
 	unsigned long last_activity;
 };
 
-struct mt76_connac_sta_key_conf {
+struct mt7902_mt76_connac_sta_key_conf {
 	s8 keyidx;
 	u8 key[16];
 };
 
 #define MT_TXP_MAX_BUF_NUM		6
 
-struct mt76_connac_fw_txp {
+struct mt7902_mt76_connac_fw_txp {
 	__le16 flags;
 	__le16 token;
 	u8 bss_idx;
@@ -145,119 +145,124 @@ struct mt76_connac_fw_txp {
 #define MT_HW_TXP_MAX_MSDU_NUM		4
 #define MT_HW_TXP_MAX_BUF_NUM		4
 
-struct mt76_connac_txp_ptr {
+struct mt7902_mt76_connac_txp_ptr {
 	__le32 buf0;
 	__le16 len0;
 	__le16 len1;
 	__le32 buf1;
 } __packed __aligned(4);
 
-struct mt76_connac_hw_txp {
+struct mt7902_mt76_connac_hw_txp {
 	__le16 msdu_id[MT_HW_TXP_MAX_MSDU_NUM];
-	struct mt76_connac_txp_ptr ptr[MT_HW_TXP_MAX_BUF_NUM / 2];
+	struct mt7902_mt76_connac_txp_ptr ptr[MT_HW_TXP_MAX_BUF_NUM / 2];
 } __packed __aligned(4);
 
-struct mt76_connac_txp_common {
+struct mt7902_mt76_connac_txp_common {
 	union {
-		struct mt76_connac_fw_txp fw;
-		struct mt76_connac_hw_txp hw;
+		struct mt7902_mt76_connac_fw_txp fw;
+		struct mt7902_mt76_connac_hw_txp hw;
 	};
 };
 
-struct mt76_connac_tx_free {
+struct mt7902_mt76_connac_tx_free {
 	__le16 rx_byte_cnt;
 	__le16 ctrl;
 	__le32 txd;
 } __packed __aligned(4);
 
-extern const struct wiphy_wowlan_support mt76_connac_wowlan_support;
+extern const struct wiphy_wowlan_support mt7902_mt76_connac_wowlan_support;
 
-static inline bool is_mt7925(struct mt76_dev *dev)
+static inline bool is_mt7925(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7925;
+	return mt7902_mt76_chip(dev) == 0x7925;
 }
 
-static inline bool is_mt7902(struct mt76_dev *dev)
+static inline bool is_mt7902(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7902;
+	return mt7902_mt76_chip(dev) == 0x7902;
 }
 
-static inline bool is_mt7922(struct mt76_dev *dev)
+static inline bool is_mt7922(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7922;
+	return mt7902_mt76_chip(dev) == 0x7922;
 }
 
-static inline bool is_mt7921(struct mt76_dev *dev)
+static inline bool is_mt7921(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7961 || is_mt7922(dev);
+	return mt7902_mt76_chip(dev) == 0x7961 || is_mt7922(dev);
 }
 
-static inline bool is_mt7663(struct mt76_dev *dev)
+static inline bool is_mt7663(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7663;
+	return mt7902_mt76_chip(dev) == 0x7663;
 }
 
-static inline bool is_mt7915(struct mt76_dev *dev)
+static inline bool is_mt7915(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7915;
+	return mt7902_mt76_chip(dev) == 0x7915;
 }
 
-static inline bool is_mt7916(struct mt76_dev *dev)
+static inline bool is_mt7916(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7906;
+	return mt7902_mt76_chip(dev) == 0x7906;
 }
 
-static inline bool is_mt7981(struct mt76_dev *dev)
+static inline bool is_mt7981(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7981;
+	return mt7902_mt76_chip(dev) == 0x7981;
 }
 
-static inline bool is_mt7986(struct mt76_dev *dev)
+static inline bool is_mt7986(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7986;
+	return mt7902_mt76_chip(dev) == 0x7986;
 }
 
-static inline bool is_mt798x(struct mt76_dev *dev)
+static inline bool is_mt798x(struct mt7902_mt76_dev *dev)
 {
 	return is_mt7981(dev) || is_mt7986(dev);
 }
 
-static inline bool is_mt7996(struct mt76_dev *dev)
+static inline bool is_mt7996(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7990;
+	return mt7902_mt76_chip(dev) == 0x7990;
 }
 
-static inline bool is_mt7992(struct mt76_dev *dev)
+static inline bool is_mt7992(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7992;
+	return mt7902_mt76_chip(dev) == 0x7992;
 }
 
-static inline bool is_mt7622(struct mt76_dev *dev)
+static inline bool is_mt799x(struct mt7902_mt76_dev *dev)
+{
+	return is_mt7996(dev) || is_mt7992(dev);
+}
+
+static inline bool is_mt7622(struct mt7902_mt76_dev *dev)
 {
 	if (!IS_ENABLED(CONFIG_MT7622_WMAC))
 		return false;
 
-	return mt76_chip(dev) == 0x7622;
+	return mt7902_mt76_chip(dev) == 0x7622;
 }
 
-static inline bool is_mt7615(struct mt76_dev *dev)
+static inline bool is_mt7615(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7615 || mt76_chip(dev) == 0x7611;
+	return mt7902_mt76_chip(dev) == 0x7615 || mt7902_mt76_chip(dev) == 0x7611;
 }
 
-static inline bool is_mt7611(struct mt76_dev *dev)
+static inline bool is_mt7611(struct mt7902_mt76_dev *dev)
 {
-	return mt76_chip(dev) == 0x7611;
+	return mt7902_mt76_chip(dev) == 0x7611;
 }
 
-static inline bool is_connac_v1(struct mt76_dev *dev)
+static inline bool is_connac_v1(struct mt7902_mt76_dev *dev)
 {
 	return is_mt7615(dev) || is_mt7663(dev) || is_mt7622(dev);
 }
 
-static inline bool is_mt76_fw_txp(struct mt76_dev *dev)
+static inline bool is_mt7902_mt76_fw_txp(struct mt7902_mt76_dev *dev)
 {
-	switch (mt76_chip(dev)) {
+	switch (mt7902_mt76_chip(dev)) {
 	case 0x7961:
 	case 0x7922:
 	case 0x7925:
@@ -269,7 +274,7 @@ static inline bool is_mt76_fw_txp(struct mt76_dev *dev)
 	}
 }
 
-static inline u8 mt76_connac_chan_bw(struct cfg80211_chan_def *chandef)
+static inline u8 mt7902_mt76_connac_chan_bw(struct cfg80211_chan_def *chandef)
 {
 	static const u8 width_to_bw[] = {
 		[NL80211_CHAN_WIDTH_40] = CMD_CBW_40MHZ,
@@ -289,26 +294,26 @@ static inline u8 mt76_connac_chan_bw(struct cfg80211_chan_def *chandef)
 	return width_to_bw[chandef->width];
 }
 
-static inline u8 mt76_connac_lmac_mapping(u8 ac)
+static inline u8 mt7902_mt76_connac_lmac_mapping(u8 ac)
 {
 	/* LMAC uses the reverse order of mac80211 AC indexes */
 	return 3 - ac;
 }
 
 static inline void *
-mt76_connac_txwi_to_txp(struct mt76_dev *dev, struct mt76_txwi_cache *t)
+mt7902_mt76_connac_txwi_to_txp(struct mt7902_mt76_dev *dev, struct mt7902_mt76_txwi_cache *t)
 {
 	u8 *txwi;
 
 	if (!t)
 		return NULL;
 
-	txwi = mt76_get_txwi_ptr(dev, t);
+	txwi = mt7902_mt76_get_txwi_ptr(dev, t);
 
 	return (void *)(txwi + MT_TXD_SIZE);
 }
 
-static inline u8 mt76_connac_spe_idx(u8 antenna_mask)
+static inline u8 mt7902_mt76_connac_spe_idx(u8 antenna_mask)
 {
 	static const u8 ant_to_spe[] = {0, 0, 1, 0, 3, 2, 4, 0,
 					9, 8, 6, 10, 16, 12, 18, 0};
@@ -319,26 +324,26 @@ static inline u8 mt76_connac_spe_idx(u8 antenna_mask)
 	return ant_to_spe[antenna_mask];
 }
 
-static inline void mt76_connac_irq_enable(struct mt76_dev *dev, u32 mask)
+static inline void mt7902_mt76_connac_irq_enable(struct mt7902_mt76_dev *dev, u32 mask)
 {
-	mt76_set_irq_mask(dev, 0, 0, mask);
+	mt7902_mt76_set_irq_mask(dev, 0, 0, mask);
 	tasklet_schedule(&dev->irq_tasklet);
 }
 
-int mt76_connac_pm_wake(struct mt76_phy *phy, struct mt76_connac_pm *pm);
-void mt76_connac_power_save_sched(struct mt76_phy *phy,
-				  struct mt76_connac_pm *pm);
-void mt76_connac_free_pending_tx_skbs(struct mt76_connac_pm *pm,
-				      struct mt76_wcid *wcid);
+int mt7902_mt76_connac_pm_wake(struct mt7902_mt76_phy *phy, struct mt7902_mt76_connac_pm *pm);
+void mt7902_mt76_connac_power_save_sched(struct mt7902_mt76_phy *phy,
+				  struct mt7902_mt76_connac_pm *pm);
+void mt7902_mt76_connac_free_pending_tx_skbs(struct mt7902_mt76_connac_pm *pm,
+				      struct mt7902_mt76_wcid *wcid);
 
-static inline void mt76_connac_tx_cleanup(struct mt76_dev *dev)
+static inline void mt7902_mt76_connac_tx_cleanup(struct mt7902_mt76_dev *dev)
 {
 	dev->queue_ops->tx_cleanup(dev, dev->q_mcu[MT_MCUQ_WM], false);
 	dev->queue_ops->tx_cleanup(dev, dev->q_mcu[MT_MCUQ_WA], false);
 }
 
 static inline bool
-mt76_connac_pm_ref(struct mt76_phy *phy, struct mt76_connac_pm *pm)
+mt7902_mt76_connac_pm_ref(struct mt7902_mt76_phy *phy, struct mt7902_mt76_connac_pm *pm)
 {
 	bool ret = false;
 
@@ -355,22 +360,22 @@ out:
 }
 
 static inline void
-mt76_connac_pm_unref(struct mt76_phy *phy, struct mt76_connac_pm *pm)
+mt7902_mt76_connac_pm_unref(struct mt7902_mt76_phy *phy, struct mt7902_mt76_connac_pm *pm)
 {
 	spin_lock_bh(&pm->wake.lock);
 
 	pm->last_activity = jiffies;
 	if (--pm->wake.count == 0 &&
 	    test_bit(MT76_STATE_MCU_RUNNING, &phy->state))
-		mt76_connac_power_save_sched(phy, pm);
+		mt7902_mt76_connac_power_save_sched(phy, pm);
 
 	spin_unlock_bh(&pm->wake.lock);
 }
 
 static inline bool
-mt76_connac_skip_fw_pmctrl(struct mt76_phy *phy, struct mt76_connac_pm *pm)
+mt7902_mt76_connac_skip_fw_pmctrl(struct mt7902_mt76_phy *phy, struct mt7902_mt76_connac_pm *pm)
 {
-	struct mt76_dev *dev = phy->dev;
+	struct mt7902_mt76_dev *dev = phy->dev;
 	bool ret;
 
 	if (dev->token_count)
@@ -384,65 +389,60 @@ mt76_connac_skip_fw_pmctrl(struct mt76_phy *phy, struct mt76_connac_pm *pm)
 }
 
 static inline void
-mt76_connac_mutex_acquire(struct mt76_dev *dev, struct mt76_connac_pm *pm)
+mt7902_mt76_connac_mutex_acquire(struct mt7902_mt76_dev *dev, struct mt7902_mt76_connac_pm *pm)
 	__acquires(&dev->mutex)
 {
 	mutex_lock(&dev->mutex);
-	mt76_connac_pm_wake(&dev->phy, pm);
+	mt7902_mt76_connac_pm_wake(&dev->phy, pm);
 }
 
 static inline void
-mt76_connac_mutex_release(struct mt76_dev *dev, struct mt76_connac_pm *pm)
+mt7902_mt76_connac_mutex_release(struct mt7902_mt76_dev *dev, struct mt7902_mt76_connac_pm *pm)
 	__releases(&dev->mutex)
 {
-	mt76_connac_power_save_sched(&dev->phy, pm);
+	mt7902_mt76_connac_power_save_sched(&dev->phy, pm);
 	mutex_unlock(&dev->mutex);
 }
 
-void mt76_connac_gen_ppe_thresh(u8 *he_ppet, int nss);
-int mt76_connac_init_tx_queues(struct mt76_phy *phy, int idx, int n_desc,
+void mt7902_mt76_connac_gen_ppe_thresh(u8 *he_ppet, int nss);
+int mt7902_mt76_connac_init_tx_queues(struct mt7902_mt76_phy *phy, int idx, int n_desc,
 			       int ring_base, void *wed, u32 flags);
 
-void mt76_connac_write_hw_txp(struct mt76_dev *dev,
-			      struct mt76_tx_info *tx_info,
+void mt7902_mt76_connac_write_hw_txp(struct mt7902_mt76_dev *dev,
+			      struct mt7902_mt76_tx_info *tx_info,
 			      void *txp_ptr, u32 id);
-void mt76_connac_txp_skb_unmap(struct mt76_dev *dev,
-			       struct mt76_txwi_cache *txwi);
-void mt76_connac_tx_complete_skb(struct mt76_dev *mdev,
-				 struct mt76_queue_entry *e);
-void mt76_connac_pm_queue_skb(struct ieee80211_hw *hw,
-			      struct mt76_connac_pm *pm,
-			      struct mt76_wcid *wcid,
+void mt7902_mt76_connac_txp_skb_unmap(struct mt7902_mt76_dev *dev,
+			       struct mt7902_mt76_txwi_cache *txwi);
+void mt7902_mt76_connac_tx_complete_skb(struct mt7902_mt76_dev *mdev,
+				 struct mt7902_mt76_queue_entry *e);
+void mt7902_mt76_connac_pm_queue_skb(struct ieee80211_hw *hw,
+			      struct mt7902_mt76_connac_pm *pm,
+			      struct mt7902_mt76_wcid *wcid,
 			      struct sk_buff *skb);
-void mt76_connac_pm_dequeue_skbs(struct mt76_phy *phy,
-				 struct mt76_connac_pm *pm);
-void mt76_connac2_mac_write_txwi(struct mt76_dev *dev, __le32 *txwi,
-				 struct sk_buff *skb, struct mt76_wcid *wcid,
+void mt7902_mt76_connac_pm_dequeue_skbs(struct mt7902_mt76_phy *phy,
+				 struct mt7902_mt76_connac_pm *pm);
+void mt7902_mt76_connac2_mac_write_txwi(struct mt7902_mt76_dev *dev, __le32 *txwi,
+				 struct sk_buff *skb, struct mt7902_mt76_wcid *wcid,
 				 struct ieee80211_key_conf *key, int pid,
-				 enum mt76_txq_id qid, u32 changed);
-u16 mt76_connac2_mac_tx_rate_val(struct mt76_phy *mphy,
+				 enum mt7902_mt76_txq_id qid, u32 changed);
+u16 mt7902_mt76_connac2_mac_tx_rate_val(struct mt7902_mt76_phy *mphy,
 				 struct ieee80211_vif *vif,
 				 bool beacon, bool mcast);
-bool mt76_connac2_mac_fill_txs(struct mt76_dev *dev, struct mt76_wcid *wcid,
+bool mt7902_mt76_connac2_mac_fill_txs(struct mt7902_mt76_dev *dev, struct mt7902_mt76_wcid *wcid,
 			       __le32 *txs_data);
-bool mt76_connac2_mac_add_txs_skb(struct mt76_dev *dev, struct mt76_wcid *wcid,
+bool mt7902_mt76_connac2_mac_add_txs_skb(struct mt7902_mt76_dev *dev, struct mt7902_mt76_wcid *wcid,
 				  int pid, __le32 *txs_data);
-void mt76_connac2_mac_decode_he_radiotap(struct mt76_dev *dev,
+void mt7902_mt76_connac2_mac_decode_he_radiotap(struct mt7902_mt76_dev *dev,
 					 struct sk_buff *skb,
 					 __le32 *rxv, u32 mode);
-int mt76_connac2_reverse_frag0_hdr_trans(struct ieee80211_vif *vif,
+int mt7902_mt76_connac2_reverse_frag0_hdr_trans(struct ieee80211_vif *vif,
 					 struct sk_buff *skb, u16 hdr_offset);
-int mt76_connac2_mac_fill_rx_rate(struct mt76_dev *dev,
-				  struct mt76_rx_status *status,
-				  struct ieee80211_supported_band *sband,
-				  __le32 *rxv, u8 *mode);
-void mt76_connac2_tx_check_aggr(struct ieee80211_sta *sta, __le32 *txwi);
-void mt76_connac2_txwi_free(struct mt76_dev *dev, struct mt76_txwi_cache *t,
+int mt7902_mt76_connac2_mac_fill_rx_rate(struct mt7902_mt76_dev *dev, struct mt7902_mt76_rx_status *status, struct ieee80211_supported_band *sband, __le32 *rxv, u8 *mode); void mt7902_mt76_connac2_tx_check_aggr(struct ieee80211_sta *sta, __le32 *txwi); void mt7902_mt76_connac2_txwi_free(struct mt7902_mt76_dev *dev, struct mt7902_mt76_txwi_cache *t,
 			    struct ieee80211_sta *sta,
 			    struct list_head *free_list);
-void mt76_connac2_tx_token_put(struct mt76_dev *dev);
+void mt7902_mt76_connac2_tx_token_put(struct mt7902_mt76_dev *dev);
 
 /* connac3 */
-void mt76_connac3_mac_decode_he_radiotap(struct sk_buff *skb, __le32 *rxv,
+void mt7902_mt76_connac3_mac_decode_he_radiotap(struct sk_buff *skb, __le32 *rxv,
 					 u8 mode);
 #endif /* __MT76_CONNAC_H */
