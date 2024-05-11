@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: ISC
-/* Copyright (C) 2021 MediaTek Inc. */
+/* Copyright (C) 2023 MediaTek Inc. */
 
 #include "mt7902.h"
 #include "../dma.h"
-#include "../mt76_connac2_mac.h"
+#include "mac.h"
 
 int mt7902e_tx_prepare_skb(struct mt7902_mt76_dev *mdev, void *txwi_ptr,
 			   enum mt7902_mt76_txq_id qid, struct mt7902_mt76_wcid *wcid,
@@ -41,8 +41,8 @@ int mt7902e_tx_prepare_skb(struct mt7902_mt76_dev *mdev, void *txwi_ptr,
 	}
 
 	pid = mt7902_mt76_tx_status_skb_add(mdev, wcid, tx_info->skb);
-	mt7902_mt76_connac2_mac_write_txwi(mdev, txwi_ptr, tx_info->skb, wcid, key,
-				    pid, qid, 0);
+	mt7902_mac_write_txwi(mdev, txwi_ptr, tx_info->skb, wcid, key,
+			      pid, qid, 0);
 
 	txp = (struct mt7902_mt76_connac_hw_txp *)(txwi + MT_TXD_SIZE);
 	memset(txp, 0, sizeof(struct mt7902_mt76_connac_hw_txp));
@@ -53,8 +53,23 @@ int mt7902e_tx_prepare_skb(struct mt7902_mt76_dev *mdev, void *txwi_ptr,
 	return 0;
 }
 
+void mt7902_tx_token_put(struct mt7902_mt792x_dev *dev)
+{
+	struct mt7902_mt76_txwi_cache *txwi;
+	int id;
+
+	spin_lock_bh(&dev->mt76.token_lock);
+	idr_for_each_entry(&dev->mt76.token, txwi, id) {
+		mt7902_txwi_free(dev, txwi, NULL, false, NULL);
+		dev->mt76.token_count--;
+	}
+	spin_unlock_bh(&dev->mt76.token_lock);
+	idr_destroy(&dev->mt76.token);
+}
+
 int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 {
+	const struct mt7902_mt792x_irq_map *irq_map = dev->irq_map;
 	int i, err;
 
 	mt7902_mt792xe_mcu_drv_pmctrl(dev);
@@ -72,12 +87,16 @@ int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 	mt7902_mt76_txq_schedule_all(&dev->mphy);
 
 	mt7902_mt76_worker_disable(&dev->mt76.tx_worker);
-	napi_disable(&dev->mt76.napi[MT_RXQ_MAIN]);
-	napi_disable(&dev->mt76.napi[MT_RXQ_MCU]);
-	napi_disable(&dev->mt76.napi[MT_RXQ_MCU_WA]);
-	napi_disable(&dev->mt76.tx_napi);
+	if (irq_map->rx.data_complete_mask)
+		napi_disable(&dev->mt76.napi[MT_RXQ_MAIN]);
+	if (irq_map->rx.wm_complete_mask)
+		napi_disable(&dev->mt76.napi[MT_RXQ_MCU]);
+	if (irq_map->rx.wm2_complete_mask)
+		napi_disable(&dev->mt76.napi[MT_RXQ_MCU_WA]);
+	if (irq_map->tx.all_complete_mask)
+		napi_disable(&dev->mt76.tx_napi);
 
-	mt7902_mt76_connac2_tx_token_put(&dev->mt76);
+	mt7902_tx_token_put(dev);
 	idr_init(&dev->mt76.token);
 
 	mt7902_mt792x_wpdma_reset(dev, true);
@@ -87,6 +106,8 @@ int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 		napi_enable(&dev->mt76.napi[i]);
 		napi_schedule(&dev->mt76.napi[i]);
 	}
+	napi_enable(&dev->mt76.tx_napi);
+	napi_schedule(&dev->mt76.tx_napi);
 	local_bh_enable();
 
 	dev->fw_assert = false;
@@ -97,7 +118,11 @@ int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 		MT_INT_RX_DONE_ALL | MT_INT_MCU_CMD);
 	mt7902_mt76_wr(dev, MT_PCIE_MAC_INT_ENABLE, 0xff);
 
-	err = mt7902e_driver_own(dev);
+	err = mt7902_mt792xe_mcu_fw_pmctrl(dev);
+	if (err)
+		return err;
+
+	err = __mt7902_mt792xe_mcu_drv_pmctrl(dev);
 	if (err)
 		goto out;
 
@@ -116,11 +141,6 @@ int mt7902e_mac_reset(struct mt7902_mt792x_dev *dev)
 	err = __mt7902_start(&dev->phy);
 out:
 	clear_bit(MT76_RESET, &dev->mphy.state);
-
-	local_bh_disable();
-	napi_enable(&dev->mt76.tx_napi);
-	napi_schedule(&dev->mt76.tx_napi);
-	local_bh_enable();
 
 	mt7902_mt76_worker_enable(&dev->mt76.tx_worker);
 

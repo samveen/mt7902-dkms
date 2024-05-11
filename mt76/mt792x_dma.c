@@ -90,7 +90,7 @@ EXPORT_SYMBOL_GPL(mt7902_mt792x_rx_poll_complete);
 #define PREFETCH(base, depth)	((base) << 16 | (depth))
 static void mt7902_mt792x_dma_prefetch(struct mt7902_mt792x_dev *dev)
 {
-	if (is_mt7925(&dev->mt76)) {
+	if (is_mt7902(&dev->mt76)) {
 		/* rx ring */
 		mt7902_mt76_wr(dev, MT_WFDMA0_RX_RING0_EXT_CTRL, PREFETCH(0x0000, 0x4));
 		mt7902_mt76_wr(dev, MT_WFDMA0_RX_RING1_EXT_CTRL, PREFETCH(0x0040, 0x4));
@@ -130,7 +130,7 @@ int mt7902_mt792x_dma_enable(struct mt7902_mt792x_dev *dev)
 
 	/* reset dma idx */
 	mt7902_mt76_wr(dev, MT_WFDMA0_RST_DTX_PTR, ~0);
-	if (is_mt7925(&dev->mt76))
+	if (is_mt7902(&dev->mt76))
 		mt7902_mt76_wr(dev, MT_WFDMA0_RST_DRX_PTR, ~0);
 
 	/* configure delay interrupt */
@@ -150,7 +150,7 @@ int mt7902_mt792x_dma_enable(struct mt7902_mt792x_dev *dev)
 	mt7902_mt76_set(dev, MT_WFDMA0_GLO_CFG,
 		 MT_WFDMA0_GLO_CFG_TX_DMA_EN | MT_WFDMA0_GLO_CFG_RX_DMA_EN);
 
-	if (is_mt7925(&dev->mt76)) {
+	if (is_mt7902(&dev->mt76)) {
 		mt7902_mt76_rmw(dev, MT_UWFDMA0_GLO_CFG_EXT1, BIT(28), BIT(28));
 		mt7902_mt76_set(dev, MT_WFDMA0_INT_RX_PRI, 0x0F00);
 		mt7902_mt76_set(dev, MT_WFDMA0_INT_TX_PRI, 0x7F00);

@@ -30,7 +30,7 @@ static u32 mt7902s_read_whcr(struct mt7902_mt76_dev *dev)
 	return sdio_readl(dev->sdio.func, MCR_WHCR, NULL);
 }
 
-int mt7902s_wfsys_reset(struct mt7902_mt792x_dev *dev)
+int mt7902s_wfsys_reset(struct mt7902_mt7902_mt792x_dev *dev)
 {
 	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
 	u32 val, status;
@@ -71,7 +71,7 @@ int mt7902s_wfsys_reset(struct mt7902_mt792x_dev *dev)
 	return 0;
 }
 
-int mt7902s_init_reset(struct mt7902_mt792x_dev *dev)
+int mt7902s_init_reset(struct mt7902_mt7902_mt792x_dev *dev)
 {
 	set_bit(MT76_MCU_RESET, &dev->mphy.state);
 
@@ -91,7 +91,7 @@ int mt7902s_init_reset(struct mt7902_mt792x_dev *dev)
 	return 0;
 }
 
-int mt7902s_mac_reset(struct mt7902_mt792x_dev *dev)
+int mt7902s_mac_reset(struct mt7902_mt7902_mt792x_dev *dev)
 {
 	int err;
 
