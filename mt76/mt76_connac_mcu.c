@@ -29,8 +29,6 @@ int mt7902_mt76_connac_mcu_patch_sem_ctrl(struct mt7902_mt76_dev *dev, bool get)
 		.op = cpu_to_le32(op),
 	};
 
-	dev_info(dev->dev, "Calling mt7902_mt76_mcu_send_message with params %d\n", req.op);
-
 	return mt7902_mt76_mcu_send_msg(dev, MCU_CMD(PATCH_SEM_CONTROL),
 				 &req, sizeof(req), true);
 }
@@ -68,7 +66,7 @@ int mt7902_mt76_connac_mcu_init_download(struct mt7902_mt76_dev *dev, u32 addr, 
 
 	if ((!is_connac_v1(dev) && addr == MCU_PATCH_ADDRESS) ||
 	    (is_mt7921(dev) && addr == 0x900000) ||
-	    (is_mt7925(dev) && (addr == 0x900000 || addr == 0xe0002800)) ||
+	    (is_mt7902(dev) && (addr == 0x900000 || addr == 0xe0002800)) ||
 	    (is_mt7996(dev) && addr == 0x900000) ||
 	    (is_mt7992(dev) && addr == 0x900000))
 		cmd = MCU_CMD(PATCH_START_REQ);
@@ -2979,7 +2977,7 @@ static u32 mt7902_mt76_connac2_get_data_mode(struct mt7902_mt76_dev *dev, u32 in
 {
 	u32 mode = DL_MODE_NEED_RSP;
 
-	if ((!is_mt7921(dev) && !is_mt7925(dev)) || info == PATCH_SEC_NOT_SUPPORT)
+	if ((!is_mt7921(dev) && !is_mt7902(dev)) || info == PATCH_SEC_NOT_SUPPORT)
 		return mode;
 
 	switch (FIELD_GET(PATCH_SEC_ENC_TYPE_MASK, info)) {
@@ -3009,11 +3007,7 @@ int mt7902_mt76_connac2_load_patch(struct mt7902_mt76_dev *dev, const char *fw_n
 	const struct mt7902_mt76_connac2_patch_hdr *hdr;
 	const struct firmware *fw = NULL;
 
-	dev_info(dev->dev, "Entering mt7902_mt76_connac_mcu_patch_sem_ctrl function\n");
 	sem = mt7902_mt76_connac_mcu_patch_sem_ctrl(dev, true);
-
-	// dump_stack();
-
 	switch (sem) {
 	case PATCH_IS_DL:
 		return 0;

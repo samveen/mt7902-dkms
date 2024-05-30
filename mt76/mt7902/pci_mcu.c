@@ -1,22 +1,8 @@
 // SPDX-License-Identifier: ISC
-/* Copyright (C) 2021 MediaTek Inc. */
+/* Copyright (C) 2023 MediaTek Inc. */
 
 #include "mt7902.h"
 #include "mcu.h"
-
-int mt7902e_driver_own(struct mt7902_mt792x_dev *dev)
-{
-	u32 reg = mt7902_reg_map_l1(dev, MT_TOP_LPCR_HOST_BAND0);
-
-	mt7902_mt76_wr(dev, reg, MT_TOP_LPCR_HOST_DRV_OWN);
-	if (!mt7902_mt76_poll_msec(dev, reg, MT_TOP_LPCR_HOST_FW_OWN,
-			    0, 500)) {
-		dev_err(dev->mt76.dev, "Timeout for driver own\n");
-		return -EIO;
-	}
-
-	return 0;
-}
 
 static int
 mt7902_mcu_send_message(struct mt7902_mt76_dev *mdev, struct sk_buff *skb,
@@ -26,7 +12,7 @@ mt7902_mcu_send_message(struct mt7902_mt76_dev *mdev, struct sk_buff *skb,
 	enum mt7902_mt76_mcuq_id txq = MT_MCUQ_WM;
 	int ret;
 
-	ret = mt7902_mt76_connac2_mcu_fill_message(mdev, skb, cmd, seq);
+	ret = mt7902_mcu_fill_message(mdev, skb, cmd, seq);
 	if (ret)
 		return ret;
 
@@ -49,7 +35,11 @@ int mt7902e_mcu_init(struct mt7902_mt792x_dev *dev)
 
 	dev->mt76.mcu_ops = &mt7902_mcu_ops;
 
-	err = mt7902e_driver_own(dev);
+	err = mt7902_mt792xe_mcu_fw_pmctrl(dev);
+	if (err)
+		return err;
+
+	err = __mt7902_mt792xe_mcu_drv_pmctrl(dev);
 	if (err)
 		return err;
 

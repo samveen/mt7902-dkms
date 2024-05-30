@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-/* Copyright (C) 2020 MediaTek Inc. */
+/* Copyright (C) 2023 MediaTek Inc. */
 
 #include <linux/etherdevice.h>
 #include <linux/hwmon.h>
@@ -7,7 +7,7 @@
 #include <linux/thermal.h>
 #include <linux/firmware.h>
 #include "mt7902.h"
-#include "../mt76_connac2_mac.h"
+#include "mac.h"
 #include "mcu.h"
 
 static ssize_t mt7902_thermal_temp_show(struct device *dev,
@@ -57,90 +57,47 @@ static int mt7902_thermal_init(struct mt7902_mt792x_phy *phy)
 						       mt7902_hwmon_groups);
 	return PTR_ERR_OR_ZERO(hwmon);
 }
-
-static void
-mt7902_regd_channel_update(struct wiphy *wiphy, struct mt7902_mt792x_dev *dev)
-{
-#define IS_UNII_INVALID(idx, sfreq, efreq) \
-	(!(dev->phy.clc_chan_conf & BIT(idx)) && (cfreq) >= (sfreq) && (cfreq) <= (efreq))
-	struct ieee80211_supported_band *sband;
-	struct mt7902_mt76_dev *mdev = &dev->mt76;
-	struct device_node *np, *band_np;
-	struct ieee80211_channel *ch;
-	int i, cfreq;
-
-	np = mt7902_mt76_find_power_limits_node(mdev);
-
-	sband = wiphy->bands[NL80211_BAND_5GHZ];
-	band_np = np ? of_get_child_by_name(np, "txpower-5g") : NULL;
-	for (i = 0; i < sband->n_channels; i++) {
-		ch = &sband->channels[i];
-		cfreq = ch->center_freq;
-
-		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
-			ch->flags |= IEEE80211_CHAN_DISABLED;
-			continue;
-		}
-
-		/* UNII-4 */
-		if (IS_UNII_INVALID(0, 5850, 5925))
-			ch->flags |= IEEE80211_CHAN_DISABLED;
-	}
-
-	sband = wiphy->bands[NL80211_BAND_6GHZ];
-	if (!sband)
-		return;
-
-	band_np = np ? of_get_child_by_name(np, "txpower-6g") : NULL;
-	for (i = 0; i < sband->n_channels; i++) {
-		ch = &sband->channels[i];
-		cfreq = ch->center_freq;
-
-		if (np && (!band_np || !mt7902_mt76_find_channel_node(band_np, ch))) {
-			ch->flags |= IEEE80211_CHAN_DISABLED;
-			continue;
-		}
-
-		/* UNII-5/6/7/8 */
-		if (IS_UNII_INVALID(1, 5925, 6425) ||
-		    IS_UNII_INVALID(2, 6425, 6525) ||
-		    IS_UNII_INVALID(3, 6525, 6875) ||
-		    IS_UNII_INVALID(4, 6875, 7125))
-			ch->flags |= IEEE80211_CHAN_DISABLED;
-	}
-}
-
-void mt7902_regd_update(struct mt7902_mt792x_dev *dev)
-{
-	struct mt7902_mt76_dev *mdev = &dev->mt76;
-	struct ieee80211_hw *hw = mdev->hw;
-	struct wiphy *wiphy = hw->wiphy;
-
-	mt7902_mcu_set_clc(dev, mdev->alpha2, dev->country_ie_env);
-	mt7902_regd_channel_update(wiphy, dev);
-	mt7902_mt76_connac_mcu_set_channel_domain(hw->priv);
-	mt7902_set_tx_sar_pwr(hw, NULL);
-}
-EXPORT_SYMBOL_GPL(mt7902_regd_update);
-
 static void
 mt7902_regd_notifier(struct wiphy *wiphy,
-		     struct regulatory_request *request)
+		     struct regulatory_request *req)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct mt7902_mt792x_dev *dev = mt7902_mt792x_hw_dev(hw);
-	struct mt7902_mt76_connac_pm *pm = &dev->pm;
+	struct mt7902_mt76_dev *mdev = &dev->mt76;
 
-	memcpy(dev->mt76.alpha2, request->alpha2, sizeof(dev->mt76.alpha2));
-	dev->mt76.region = request->dfs_region;
-	dev->country_ie_env = request->country_ie_env;
-
-	if (pm->suspended)
+	/* allow world regdom at the first boot only */
+	if (!memcmp(req->alpha2, "00", 2) &&
+	    mdev->alpha2[0] && mdev->alpha2[1])
 		return;
 
+	/* do not need to update the same country twice */
+	if (!memcmp(req->alpha2, mdev->alpha2, 2) &&
+	    dev->country_ie_env == req->country_ie_env)
+		return;
+
+	memcpy(mdev->alpha2, req->alpha2, 2);
+	mdev->region = req->dfs_region;
+	dev->country_ie_env = req->country_ie_env;
+
 	mt7902_mt792x_mutex_acquire(dev);
-	mt7902_regd_update(dev);
+	mt7902_mcu_set_clc(dev, req->alpha2, req->country_ie_env);
+	mt7902_mcu_set_channel_domain(hw->priv);
+	mt7902_set_tx_sar_pwr(hw, NULL);
 	mt7902_mt792x_mutex_release(dev);
+}
+
+static void mt7902_mac_init_basic_rates(struct mt7902_mt792x_dev *dev)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mt7902_mt76_rates); i++) {
+		u16 rate = mt7902_mt76_rates[i].hw_value;
+		u16 idx = MT792x_BASIC_RATES_TBL + i;
+
+		rate = FIELD_PREP(MT_TX_RATE_MODE, rate >> 8) |
+		       FIELD_PREP(MT_TX_RATE_IDX, rate & GENMASK(7, 0));
+		mt7902_mac_set_fixed_rate_table(dev, idx, rate);
+	}
 }
 
 int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
@@ -150,8 +107,6 @@ int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 	mt7902_mt76_rmw_field(dev, MT_MDP_DCR1, MT_MDP_DCR1_MAX_RX_LEN, 1536);
 	/* enable hardware de-agg */
 	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_DAMSDU_EN);
-	/* enable hardware rx header translation */
-	mt7902_mt76_set(dev, MT_MDP_DCR0, MT_MDP_DCR0_RX_HDR_TRANS_EN);
 
 	for (i = 0; i < MT792x_WTBL_SIZE; i++)
 		mt7902_mac_wtbl_update(dev, i,
@@ -159,7 +114,11 @@ int mt7902_mac_init(struct mt7902_mt792x_dev *dev)
 	for (i = 0; i < 2; i++)
 		mt7902_mt792x_mac_init_band(dev, i);
 
-	return mt7902_mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b, 0);
+	mt7902_mac_init_basic_rates(dev);
+
+	memzero_explicit(&dev->mt76.alpha2, sizeof(dev->mt76.alpha2));
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(mt7902_mac_init);
 
@@ -167,10 +126,6 @@ static int __mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 {
 	int ret;
 
-	/* force firmware operation mode into normal state,
-	 * which should be set before firmware download stage.
-	 */
-	mt7902_mt76_wr(dev, MT_SWDEF_MODE, MT_SWDEF_NORMAL_MODE);
 	ret = mt7902_mt792x_mcu_init(dev);
 	if (ret)
 		goto out;
@@ -182,6 +137,9 @@ static int __mt7902_init_hardware(struct mt7902_mt792x_dev *dev)
 		goto out;
 
 	ret = mt7902_mac_init(dev);
+	if (ret)
+		goto out;
+
 out:
 	return ret;
 }
@@ -219,7 +177,7 @@ static void mt7902_init_work(struct work_struct *work)
 		return;
 
 	mt7902_mt76_set_stream_caps(&dev->mphy, true);
-	mt7902_set_stream_he_caps(&dev->phy);
+	mt7902_set_stream_he_eht_caps(&dev->phy);
 
 	ret = mt7902_mt76_register_device(&dev->mt76, true, mt7902_mt76_rates,
 				   ARRAY_SIZE(mt7902_mt76_rates));
@@ -243,7 +201,7 @@ static void mt7902_init_work(struct work_struct *work)
 	/* we support chip reset now */
 	dev->hw_init_done = true;
 
-	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, dev->pm.ds_enable);
+	mt7902_mcu_set_deep_sleep(dev, dev->pm.ds_enable);
 }
 
 int mt7902_register_device(struct mt7902_mt792x_dev *dev)
@@ -261,8 +219,6 @@ int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 	spin_lock_init(&dev->pm.wake.lock);
 	mutex_init(&dev->pm.mutex);
 	init_waitqueue_head(&dev->pm.wait);
-	if (mt7902_mt76_is_sdio(&dev->mt76))
-		init_waitqueue_head(&dev->mt76.sdio.wait);
 	spin_lock_init(&dev->pm.txq_lock);
 	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt7902_mt792x_mac_work);
 	INIT_DELAYED_WORK(&dev->phy.scan_work, mt7902_scan_work);
@@ -308,17 +264,20 @@ int mt7902_register_device(struct mt7902_mt792x_dev *dev)
 	dev->mphy.sband_2g.sband.ht_cap.cap |=
 			IEEE80211_HT_CAP_LDPC_CODING |
 			IEEE80211_HT_CAP_MAX_AMSDU;
+	dev->mphy.sband_2g.sband.ht_cap.ampdu_density =
+			IEEE80211_HT_MPDU_DENSITY_2;
 	dev->mphy.sband_5g.sband.ht_cap.cap |=
 			IEEE80211_HT_CAP_LDPC_CODING |
 			IEEE80211_HT_CAP_MAX_AMSDU;
+	dev->mphy.sband_2g.sband.ht_cap.ampdu_density =
+			IEEE80211_HT_MPDU_DENSITY_1;
 	dev->mphy.sband_5g.sband.vht_cap.cap |=
 			IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454 |
 			IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK |
 			IEEE80211_VHT_CAP_SU_BEAMFORMEE_CAPABLE |
 			IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE |
 			(3 << IEEE80211_VHT_CAP_BEAMFORMEE_STS_SHIFT);
-	if (is_mt7902(&dev->mt76))
-		dev->mphy.sband_5g.sband.vht_cap.cap |=
+	dev->mphy.sband_5g.sband.vht_cap.cap |=
 			IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ |
 			IEEE80211_VHT_CAP_SHORT_GI_160;
 

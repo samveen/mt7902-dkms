@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: ISC
-/* Copyright (C) 2020 MediaTek Inc. */
+/* Copyright (C) 2023 MediaTek Inc. */
 
 #include "mt7902.h"
+#include "mcu.h"
 
 static int
 mt7902_reg_set(void *data, u64 val)
 {
 	struct mt7902_mt792x_dev *dev = data;
+	u32 regval = val;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	mt7902_mt76_wr(dev, dev->mt76.debugfs_reg, val);
+	mt7902_mcu_regval(dev, dev->mt76.debugfs_reg, &regval, true);
 	mt7902_mt792x_mutex_release(dev);
 
 	return 0;
@@ -19,10 +21,14 @@ static int
 mt7902_reg_get(void *data, u64 *val)
 {
 	struct mt7902_mt792x_dev *dev = data;
+	u32 regval;
+	int ret;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	*val = mt7902_mt76_rr(dev, dev->mt76.debugfs_reg);
+	ret = mt7902_mcu_regval(dev, dev->mt76.debugfs_reg, &regval, false);
 	mt7902_mt792x_mutex_release(dev);
+	if (!ret)
+		*val = regval;
 
 	return 0;
 }
@@ -61,82 +67,115 @@ DEFINE_SHOW_ATTRIBUTE(mt7902_mt792x_tx_stats);
 
 static void
 mt7902_seq_puts_array(struct seq_file *file, const char *str,
-		      s8 *val, int len)
+		      s8 val[][2], int len, u8 band_idx)
 {
 	int i;
 
-	seq_printf(file, "%-16s:", str);
+	seq_printf(file, "%-22s:", str);
 	for (i = 0; i < len; i++)
-		if (val[i] == 127)
+		if (val[i][band_idx] == 127)
 			seq_printf(file, " %6s", "N.A");
 		else
-			seq_printf(file, " %6d", val[i]);
+			seq_printf(file, " %6d", val[i][band_idx]);
 	seq_puts(file, "\n");
 }
 
-#define mt7902_print_txpwr_entry(prefix, rate)				\
-({									\
-	mt7902_seq_puts_array(s, #prefix " (user)",			\
-			      txpwr.data[TXPWR_USER].rate,		\
-			      ARRAY_SIZE(txpwr.data[TXPWR_USER].rate)); \
-	mt7902_seq_puts_array(s, #prefix " (eeprom)",			\
-			      txpwr.data[TXPWR_EEPROM].rate,		\
-			      ARRAY_SIZE(txpwr.data[TXPWR_EEPROM].rate)); \
-	mt7902_seq_puts_array(s, #prefix " (tmac)",			\
-			      txpwr.data[TXPWR_MAC].rate,		\
-			      ARRAY_SIZE(txpwr.data[TXPWR_MAC].rate));	\
+#define mt7902_print_txpwr_entry(prefix, rate, idx)	\
+({							\
+	mt7902_seq_puts_array(s, #prefix " (tmac)",	\
+			      txpwr->rate,		\
+			      ARRAY_SIZE(txpwr->rate),	\
+			      idx);			\
 })
+
+static inline void
+mt7902_eht_txpwr(struct seq_file *s, struct mt7902_txpwr *txpwr, u8 band_idx)
+{
+	seq_printf(s, "%-22s  %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s\n",
+		   " ", "mcs0", "mcs1", "mcs2", "mcs3", "mcs4", "mcs5",
+		   "mcs6", "mcs7", "mcs8", "mcs9", "mcs10", "mcs11",
+		   "mcs12", "mcs13", "mcs14", "mcs15");
+	mt7902_print_txpwr_entry(EHT26, eht26, band_idx);
+	mt7902_print_txpwr_entry(EHT52, eht52, band_idx);
+	mt7902_print_txpwr_entry(EHT106, eht106, band_idx);
+	mt7902_print_txpwr_entry(EHT242, eht242, band_idx);
+	mt7902_print_txpwr_entry(EHT484, eht484, band_idx);
+
+	mt7902_print_txpwr_entry(EHT996, eht996, band_idx);
+	mt7902_print_txpwr_entry(EHT996x2, eht996x2, band_idx);
+	mt7902_print_txpwr_entry(EHT996x4, eht996x4, band_idx);
+	mt7902_print_txpwr_entry(EHT26_52, eht26_52, band_idx);
+	mt7902_print_txpwr_entry(EHT26_106, eht26_106, band_idx);
+	mt7902_print_txpwr_entry(EHT484_242, eht484_242, band_idx);
+	mt7902_print_txpwr_entry(EHT996_484, eht996_484, band_idx);
+	mt7902_print_txpwr_entry(EHT996_484_242, eht996_484_242, band_idx);
+	mt7902_print_txpwr_entry(EHT996x2_484, eht996x2_484, band_idx);
+	mt7902_print_txpwr_entry(EHT996x3, eht996x3, band_idx);
+	mt7902_print_txpwr_entry(EHT996x3_484, eht996x3_484, band_idx);
+}
 
 static int
 mt7902_txpwr(struct seq_file *s, void *data)
 {
 	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
-	struct mt7902_txpwr txpwr;
-	int ret;
+	struct mt7902_txpwr *txpwr = NULL;
+	u8 band_idx = dev->mphy.band_idx;
+	int ret = 0;
+
+	txpwr = devm_kmalloc(dev->mt76.dev, sizeof(*txpwr), GFP_KERNEL);
+
+	if (!txpwr)
+		return -ENOMEM;
 
 	mt7902_mt792x_mutex_acquire(dev);
-	ret = mt7902_get_txpwr_info(dev, &txpwr);
+	ret = mt7902_get_txpwr_info(dev, band_idx, txpwr);
 	mt7902_mt792x_mutex_release(dev);
 
 	if (ret)
-		return ret;
+		goto out;
 
-	seq_printf(s, "Tx power table (channel %d)\n", txpwr.ch);
-	seq_printf(s, "%-16s  %6s %6s %6s %6s\n",
+	seq_printf(s, "%-22s  %6s %6s %6s %6s\n",
 		   " ", "1m", "2m", "5m", "11m");
-	mt7902_print_txpwr_entry(CCK, cck);
+	mt7902_print_txpwr_entry(CCK, cck, band_idx);
 
-	seq_printf(s, "%-16s  %6s %6s %6s %6s %6s %6s %6s %6s\n",
+	seq_printf(s, "%-22s  %6s %6s %6s %6s %6s %6s %6s %6s\n",
 		   " ", "6m", "9m", "12m", "18m", "24m", "36m",
 		   "48m", "54m");
-	mt7902_print_txpwr_entry(OFDM, ofdm);
+	mt7902_print_txpwr_entry(OFDM, ofdm, band_idx);
 
-	seq_printf(s, "%-16s  %6s %6s %6s %6s %6s %6s %6s %6s\n",
+	seq_printf(s, "%-22s  %6s %6s %6s %6s %6s %6s %6s %6s\n",
 		   " ", "mcs0", "mcs1", "mcs2", "mcs3", "mcs4", "mcs5",
 		   "mcs6", "mcs7");
-	mt7902_print_txpwr_entry(HT20, ht20);
+	mt7902_print_txpwr_entry(HT20, ht20, band_idx);
 
-	seq_printf(s, "%-16s  %6s %6s %6s %6s %6s %6s %6s %6s %6s\n",
+	seq_printf(s, "%-22s  %6s %6s %6s %6s %6s %6s %6s %6s %6s\n",
 		   " ", "mcs0", "mcs1", "mcs2", "mcs3", "mcs4", "mcs5",
 		   "mcs6", "mcs7", "mcs32");
-	mt7902_print_txpwr_entry(HT40, ht40);
+	mt7902_print_txpwr_entry(HT40, ht40, band_idx);
 
-	seq_printf(s, "%-16s  %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s\n",
+	seq_printf(s, "%-22s  %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s %6s\n",
 		   " ", "mcs0", "mcs1", "mcs2", "mcs3", "mcs4", "mcs5",
 		   "mcs6", "mcs7", "mcs8", "mcs9", "mcs10", "mcs11");
-	mt7902_print_txpwr_entry(VHT20, vht20);
-	mt7902_print_txpwr_entry(VHT40, vht40);
-	mt7902_print_txpwr_entry(VHT80, vht80);
-	mt7902_print_txpwr_entry(VHT160, vht160);
-	mt7902_print_txpwr_entry(HE26, he26);
-	mt7902_print_txpwr_entry(HE52, he52);
-	mt7902_print_txpwr_entry(HE106, he106);
-	mt7902_print_txpwr_entry(HE242, he242);
-	mt7902_print_txpwr_entry(HE484, he484);
-	mt7902_print_txpwr_entry(HE996, he996);
-	mt7902_print_txpwr_entry(HE996x2, he996x2);
+	mt7902_print_txpwr_entry(VHT20, vht20, band_idx);
+	mt7902_print_txpwr_entry(VHT40, vht40, band_idx);
 
-	return 0;
+	mt7902_print_txpwr_entry(VHT80, vht80, band_idx);
+	mt7902_print_txpwr_entry(VHT160, vht160, band_idx);
+
+	mt7902_print_txpwr_entry(HE26, he26, band_idx);
+	mt7902_print_txpwr_entry(HE52, he52, band_idx);
+	mt7902_print_txpwr_entry(HE106, he106, band_idx);
+	mt7902_print_txpwr_entry(HE242, he242, band_idx);
+	mt7902_print_txpwr_entry(HE484, he484, band_idx);
+
+	mt7902_print_txpwr_entry(HE996, he996, band_idx);
+	mt7902_print_txpwr_entry(HE996x2, he996x2, band_idx);
+
+	mt7902_eht_txpwr(s, txpwr, band_idx);
+
+out:
+	devm_kfree(dev->mt76.dev, txpwr);
+	return ret;
 }
 
 static int
@@ -201,7 +240,7 @@ mt7902_deep_sleep_set(void *data, u64 val)
 
 	pm->ds_enable_user = enable;
 	pm->ds_enable = enable && !monitor;
-	mt7902_mt76_connac_mcu_set_deep_sleep(&dev->mt76, pm->ds_enable);
+	mt7902_mcu_set_deep_sleep(dev, pm->ds_enable);
 out:
 	mt7902_mt792x_mutex_release(dev);
 
@@ -237,7 +276,7 @@ static int mt7902_chip_reset(void *data, u64 val)
 	default:
 		/* Collect the core dump before reset wifisys. */
 		mt7902_mt792x_mutex_acquire(dev);
-		ret = mt7902_mt76_connac_mcu_chip_config(&dev->mt76);
+		ret = mt7902_mcu_chip_config(dev, "assert");
 		mt7902_mt792x_mutex_release(dev);
 		break;
 	}
@@ -246,20 +285,6 @@ static int mt7902_chip_reset(void *data, u64 val)
 }
 
 DEFINE_DEBUGFS_ATTRIBUTE(fops_reset, NULL, mt7902_chip_reset, "%lld\n");
-
-static int
-mt7902s_sched_quota_read(struct seq_file *s, void *data)
-{
-	struct mt7902_mt792x_dev *dev = dev_get_drvdata(s->private);
-	struct mt7902_mt76_sdio *sdio = &dev->mt76.sdio;
-
-	seq_printf(s, "pse_data_quota\t%d\n", sdio->sched.pse_data_quota);
-	seq_printf(s, "ple_data_quota\t%d\n", sdio->sched.ple_data_quota);
-	seq_printf(s, "pse_mcu_quota\t%d\n", sdio->sched.pse_mcu_quota);
-	seq_printf(s, "sched_deficit\t%d\n", sdio->sched.deficit);
-
-	return 0;
-}
 
 int mt7902_init_debugfs(struct mt7902_mt792x_dev *dev)
 {
@@ -289,8 +314,6 @@ int mt7902_init_debugfs(struct mt7902_mt792x_dev *dev)
 	debugfs_create_devm_seqfile(dev->mt76.dev, "runtime_pm_stats", dir,
 				    mt7902_mt792x_pm_stats);
 	debugfs_create_file("deep-sleep", 0600, dir, dev, &fops_ds);
-	if (mt7902_mt76_is_sdio(&dev->mt76))
-		debugfs_create_devm_seqfile(dev->mt76.dev, "sched-quota", dir,
-					    mt7902s_sched_quota_read);
+
 	return 0;
 }
