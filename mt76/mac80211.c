@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2016 Felix Fietkau <nbd@nbd.name>
  */
+#include <linux/version.h>
 #include <linux/sched.h>
 #include <linux/of.h>
 #include "mt76.h"
@@ -1621,8 +1622,13 @@ EXPORT_SYMBOL_GPL(mt7902_mt76_get_sar_power);
 static void
 __mt7902_mt76_csa_finish(void *priv, u8 *mac, struct ieee80211_vif *vif)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+	if (vif->bss_conf.csa_active && ieee80211_beacon_cntdwn_is_complete(vif, 0))
+		ieee80211_csa_finish(vif, 0);
+#else
 	if (vif->bss_conf.csa_active && ieee80211_beacon_cntdwn_is_complete(vif))
 		ieee80211_csa_finish(vif);
+#endif
 }
 
 void mt7902_mt76_csa_finish(struct mt7902_mt76_dev *dev)
@@ -1646,7 +1652,11 @@ __mt7902_mt76_csa_check(void *priv, u8 *mac, struct ieee80211_vif *vif)
 	if (!vif->bss_conf.csa_active)
 		return;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+	dev->csa_complete |= ieee80211_beacon_cntdwn_is_complete(vif, 0);
+#else
 	dev->csa_complete |= ieee80211_beacon_cntdwn_is_complete(vif);
+#endif
 }
 
 void mt7902_mt76_csa_check(struct mt7902_mt76_dev *dev)
