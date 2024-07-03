@@ -11,10 +11,16 @@
 #include "../dma.h"
 
 static const struct pci_device_id mt7902_pci_device_table[] = {
-	{ PCI_DEVICE(PCI_VENDOR_ID_MEDIATEK, 0x7925),
-		.driver_data = (kernel_ulong_t)MT7925_FIRMWARE_WM },
-	{ PCI_DEVICE(PCI_VENDOR_ID_MEDIATEK, 0x0717),
-		.driver_data = (kernel_ulong_t)MT7925_FIRMWARE_WM },
+	/* Base PCI ID */
+	{ PCI_DEVICE(PCI_VENDOR_ID_MEDIATEK, 0x7902), .driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
+	/* MicroTek */
+	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_MEDIATEK, 0x7902, 0x14C3, 0x7902), .driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
+	/* MicroTek */
+	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_MEDIATEK, 0x7902, 0x14C3, 0x1EDE), .driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
+	/* AzureWave */
+	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_MEDIATEK, 0x7902, 0x1A3B, 0x5520), .driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
+	/* AzureWave */
+	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_MEDIATEK, 0x7902, 0x1A3B, 0x5521), .driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	{ },
 };
 

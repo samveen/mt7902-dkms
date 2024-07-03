@@ -36,6 +36,9 @@
 #define MT792x_MCU_INIT_RETRY_COUNT	10
 #define MT792x_WFSYS_INIT_RETRY_COUNT	2
 
+#define MT7902_FIRMWARE_WM	"mediatek/WIFI_RAM_CODE_MT7902_1.bin"
+#define MT7902_ROM_PATCH	"mediatek/WIFI_MT7902_patch_mcu_1_1_hdr.bin"
+
 #define MT7921_FIRMWARE_WM	"mediatek/WIFI_RAM_CODE_MT7961_1.bin"
 #define MT7922_FIRMWARE_WM	"mediatek/WIFI_RAM_CODE_MT7922_1.bin"
 #define MT7925_FIRMWARE_WM	"mediatek/mt7925/WIFI_RAM_CODE_MT7925_1_1.bin"
@@ -324,6 +327,8 @@ int mt7902_mt792x_mcu_fw_pmctrl(struct mt7902_mt792x_dev *dev);
 static inline char *mt7902_mt792x_ram_name(struct mt7902_mt792x_dev *dev)
 {
 	switch (mt7902_mt76_chip(&dev->mt76)) {
+        case 0x7902:
+                return MT7902_FIRMWARE_WM;
 	case 0x7922:
 		return MT7922_FIRMWARE_WM;
 	case 0x7925:
@@ -336,6 +341,8 @@ static inline char *mt7902_mt792x_ram_name(struct mt7902_mt792x_dev *dev)
 static inline char *mt7902_mt792x_patch_name(struct mt7902_mt792x_dev *dev)
 {
 	switch (mt7902_mt76_chip(&dev->mt76)) {
+        case 0x7902:
+                return MT7902_ROM_PATCH;
 	case 0x7922:
 		return MT7922_ROM_PATCH;
 	case 0x7925:
