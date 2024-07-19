@@ -16,11 +16,6 @@
 #define MT7925_RX_RING_SIZE		1536
 #define MT7925_RX_MCU_RING_SIZE		512
 
-
-#define MT7902_FIRMWARE_WM		"mediatek/WIFI_RAM_CODE_MT7902_1.bin"
-#define MT7902_ROM_PATCH		"mediatek/WIFI_MT7902_patch_mcu_1_1_hdr.bin"
-
-
 #define MT7925_EEPROM_SIZE		3584
 #define MT7925_TOKEN_SIZE		8192
 

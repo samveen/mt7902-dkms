@@ -64,14 +64,14 @@
 
 #define MT_RX_DATA_RING_BASE		MT_WFDMA0(0x500)
 
-#define MT_INFRA_CFG_BASE		0xd1000
-#define MT_INFRA(ofs)			(MT_INFRA_CFG_BASE + (ofs))
+#define MT_INFRA_CFG_BASE               0xfe000
+#define MT_INFRA(ofs)                   (MT_INFRA_CFG_BASE + (ofs))
 
-#define MT_HIF_REMAP_L1			0x155024
-#define MT_HIF_REMAP_L1_MASK		GENMASK(31, 16)
-#define MT_HIF_REMAP_L1_OFFSET		GENMASK(15, 0)
-#define MT_HIF_REMAP_L1_BASE		GENMASK(31, 16)
-#define MT_HIF_REMAP_BASE_L1		0x130000
+#define MT_HIF_REMAP_L1                 MT_INFRA(0x24c)
+#define MT_HIF_REMAP_L1_MASK            GENMASK(15, 0)
+#define MT_HIF_REMAP_L1_OFFSET          GENMASK(15, 0)
+#define MT_HIF_REMAP_L1_BASE            GENMASK(31, 16)
+#define MT_HIF_REMAP_BASE_L1		0x40000
 
 #define MT_HIF_REMAP_L2			0x0120
 #if IS_ENABLED(CONFIG_MT76_DEV)
