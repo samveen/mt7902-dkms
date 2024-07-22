@@ -4,6 +4,7 @@
 #ifndef __MT792X_H
 #define __MT792X_H
 
+#include <linux/version.h>
 #include <linux/interrupt.h>
 #include <linux/ktime.h>
 
@@ -249,7 +250,11 @@ static inline bool mt7902_mt792x_dma_need_reinit(struct mt7902_mt792x_dev *dev)
 #define mt7902_mt792x_mutex_release(dev)	\
 	mt7902_mt76_connac_mutex_release(&(dev)->mt76, &(dev)->pm)
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0))
+void mt7902_mt792x_stop(struct ieee80211_hw *hw, bool suspend);
+#else
 void mt7902_mt792x_stop(struct ieee80211_hw *hw);
+#endif
 void mt7902_mt792x_pm_wake_work(struct work_struct *work);
 void mt7902_mt792x_pm_power_save_work(struct work_struct *work);
 void mt7902_mt792x_reset(struct mt7902_mt76_dev *mdev);
@@ -341,8 +346,8 @@ static inline char *mt7902_mt792x_ram_name(struct mt7902_mt792x_dev *dev)
 static inline char *mt7902_mt792x_patch_name(struct mt7902_mt792x_dev *dev)
 {
 	switch (mt7902_mt76_chip(&dev->mt76)) {
-        case 0x7902:
-                return MT7902_ROM_PATCH;
+	case 0x7902:
+		return MT7902_ROM_PATCH;
 	case 0x7922:
 		return MT7922_ROM_PATCH;
 	case 0x7925:
