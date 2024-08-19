@@ -250,7 +250,7 @@ static inline bool mt7902_mt792x_dma_need_reinit(struct mt7902_mt792x_dev *dev)
 #define mt7902_mt792x_mutex_release(dev)	\
 	mt7902_mt76_connac_mutex_release(&(dev)->mt76, &(dev)->pm)
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0))
 void mt7902_mt792x_stop(struct ieee80211_hw *hw, bool suspend);
 #else
 void mt7902_mt792x_stop(struct ieee80211_hw *hw);

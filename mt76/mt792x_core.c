@@ -91,7 +91,7 @@ void mt7902_mt792x_tx(struct ieee80211_hw *hw, struct ieee80211_tx_control *cont
 }
 EXPORT_SYMBOL_GPL(mt7902_mt792x_tx);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0))
 void mt7902_mt792x_stop(struct ieee80211_hw *hw, bool suspend)
 #else
 void mt7902_mt792x_stop(struct ieee80211_hw *hw)
